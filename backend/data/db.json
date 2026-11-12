@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "id": "user-superadmin-1",
+      "username": "sadmin",
+      "password": "sadmin@123",
+      "name": "Super Admin",
+      "role": "superadmin"
+    }
+  ],
+  "qrs": [],
+  "clients": [],
+  "reviews": []
+}
