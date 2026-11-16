@@ -776,323 +776,322 @@ export default function CustomerReviewForm({
     }
   };
 
-  // 3. PURE ENGLISH Fallbacks
+  // 3. PURE ENGLISH Fallbacks (Very Simple, 100% Positive Everyday English)
   const getRawCategoryFallbacksEnglish = (categoryKey, name) => {
     switch (categoryKey) {
       case 'Healthcare & Clinic':
         return [
-          `Great care and gentle doctors at ${name}, very polite staff!`,
-          `Very clean clinic with minimal waiting time. The doctors explain everything with patience and care.`,
-          `Truly thankful for the exceptional medical care at ${name}. Spotless facility and appointments run smoothly.`,
-          `The doctors and staff are very supportive and listened patiently to all my health concerns.`,
-          `Excellent diagnostic service and prompt reports. Highly recommend ${name} for family care!`,
-          `Warm reception and very compassionate nursing team. Truly an outstanding clinic!`,
-          `Modern medical equipment, sterile environment, and very transparent consultation fees.`,
-          `Felt completely safe and well cared for. Best healthcare experience in the area!`,
-          `Very reassuring consultation and quick appointment scheduling at ${name}.`,
-          `Hygienic waiting lounge and the staff prioritizes patient comfort at every step.`,
-          `The specialists here are knowledgeable, attentive, and very thorough in their diagnosis.`,
-          `Minimal paperwork and very prompt attention from the nursing team at ${name}.`,
-          `Doctors provide clear guidance and avoid unnecessary medical tests. Very honest practice.`,
-          `Extremely organized clinic with spotless treatment rooms. Top notch medical care!`,
-          `Compassionate staff who go above and beyond to make patients feel at ease.`,
-          `Great follow-up care and clear explanation of all medications. Thank you ${name}!`,
-          `Wonderful clinic with caring doctors and very helpful front desk staff.`,
-          `Clean, calm environment and very gentle treatment. Highly recommended for children and seniors!`,
-          `Emergency consultation handled with utmost speed and precision. Lifesaver!`,
-          `Courteous reception, polite paramedical staff, and experienced doctors throughout.`,
-          `One of the best clinics in the neighborhood with reasonable consultation charges.`,
-          `Doctor listened to every symptom with genuine empathy. Feeling much better!`,
-          `Transparent treatment plan and spotless hygiene maintained across all rooms.`,
-          `Quick token system, minimal waiting time, and excellent bedside manners.`
+          `Great care and friendly doctors at ${name}, very polite staff!`,
+          `Very clean clinic with short waiting time. Doctor explained everything with patience and care.`,
+          `Thank you for the great medical care at ${name}. Clean rooms and appointments run on time.`,
+          `The doctors and staff are very helpful and listened patiently to all my health questions.`,
+          `Quick test results and caring doctors. Highly recommend ${name} for family health!`,
+          `Warm welcome and very polite nurses. Truly a wonderful clinic!`,
+          `Clean treatment rooms, modern equipment, and fair consultation fees.`,
+          `Felt very safe and well cared for. Best clinic experience in the area!`,
+          `Very polite reception and doctors checked everything with gentle care.`,
+          `Clean waiting area and staff always takes good care of patients.`,
+          `The doctors here are very skilled, kind, and give honest advice.`,
+          `Quick token system and fast attention from the nursing team at ${name}.`,
+          `Doctors give clear medicine guidance without any unnecessary tests. Very honest!`,
+          `Very neat clinic with clean treatment rooms. High quality medical care!`,
+          `Helpful and smiling staff who make you feel completely comfortable.`,
+          `Great follow-up and clear explanation of medicines. Thank you ${name}!`,
+          `Wonderful clinic with caring doctors and helpful front desk staff.`,
+          `Clean and peaceful clinic with gentle treatment. Highly recommended for kids and elders!`,
+          `Fast response and emergency care handled very quickly. Lifesaver!`,
+          `Polite reception, caring staff, and experienced doctors throughout.`,
+          `One of the best clinics in the neighborhood with fair fees.`,
+          `Doctor listened to every symptom with patience. Feeling much better!`,
+          `Honest treatment plan and spotless hygiene maintained in all rooms.`,
+          `Short waiting time and very caring doctors at ${name}. 5 stars!`
         ];
       case 'Restaurant & Cafe':
         return [
           `Delicious food and cozy atmosphere at ${name}!`,
-          `Quick service and fresh dishes every single time. The staff is courteous and attentive.`,
-          `Had a wonderful dining experience at ${name}. Generous portions and lovely hospitality!`,
-          `Loved the flavors and presentation of every dish. Will definitely be ordering again!`,
-          `Great ambiance for dining with friends and family. The staff made us feel so welcome.`,
-          `Superb taste, hygienic kitchen, and reasonable prices. Easily one of my favorite spots!`,
-          `Every bite was flavorful and served piping hot. Excellent customer care from start to finish!`,
-          `Amazing food options, delicious drinks, and comfortable seating. Highly recommend ${name}!`,
-          `Authentic flavors and lovely presentation! Everything tasted exceptionally fresh.`,
-          `The mocktails and appetizers at ${name} are truly unmatched. Great vibe overall!`,
-          `Prompt service even during busy peak hours. Staff was courteous and always smiling.`,
-          `Comfortable seating, pleasant background music, and delightful desserts!`,
-          `Loved the hospitality and culinary excellence at ${name}. Perfect weekend dinner spot!`,
-          `Clean dining tables, sanitized cutlery, and mouth-watering dishes. 5 stars!`,
-          `Generous portion sizes and great value for money. Can't wait to visit again!`,
-          `Staff was very accommodating with custom dietary preferences. Excellent hospitality!`,
-          `The chef's special dishes here are outstanding. Highly recommended for food lovers!`,
-          `Warm welcome at the door and quick order turnaround. Outstanding food quality!`,
-          `Cosy aesthetic lighting and top-tier culinary flavors. Loved every minute at ${name}!`,
-          `Piping hot food, delicious aromatic spices, and friendly service throughout.`,
-          `Great place for family dinners and private celebrations. Very polite servers!`,
-          `Exceptional culinary taste with fresh ingredients in every single bite.`,
+          `Quick service and fresh food every single time. Staff is very polite and smiling.`,
+          `Had a wonderful meal at ${name}. Big portion sizes and warm hospitality!`,
+          `Loved the taste and fresh presentation of every dish. Will definitely order again!`,
+          `Great place for dining with friends and family. Staff made us feel so welcome.`,
+          `Super tasty food, clean kitchen, and fair prices. Easily one of my favorite spots!`,
+          `Every dish was fresh, hot, and full of flavor. Great customer service throughout!`,
+          `Delicious food options, refreshing drinks, and comfortable seating. Highly recommend ${name}!`,
+          `Authentic taste and lovely food! Everything tasted super fresh.`,
+          `The starters and special dishes at ${name} are very tasty. Great vibe overall!`,
+          `Prompt service even during busy hours. Staff was polite and always smiling.`,
+          `Comfortable seating, pleasant background music, and yummy desserts!`,
+          `Loved the hospitality and delicious food at ${name}. Perfect family dinner spot!`,
+          `Clean dining tables, neat plates, and mouth-watering food. 5 stars!`,
+          `Generous food portions and great value for money. Can't wait to visit again!`,
+          `Staff was very helpful and served custom requests with a smile. Great hospitality!`,
+          `The special recipes here are super tasty. Highly recommended for all food lovers!`,
+          `Warm welcome at the door and quick order delivery. Outstanding food quality!`,
+          `Nice lighting and delicious food flavors. Loved every minute at ${name}!`,
+          `Piping hot food, great spices, and friendly service throughout.`,
+          `Great spot for family dinners and celebrations. Very polite servers!`,
+          `Fresh ingredients in every single bite. Very satisfied!`,
           `Fast billing, reasonable prices, and fantastic hospitality at ${name}.`,
-          `A hidden gem with flavorful recipes and a welcoming dining atmosphere!`
+          `A great place with tasty recipes and a friendly dining atmosphere!`
         ];
       case 'Hotel & Resort':
         return [
           `Spotless rooms and wonderful hospitality at ${name}!`,
-          `Smooth check-in and peaceful stay throughout our visit. The staff was always helpful and accommodating.`,
-          `Had an unforgettable stay at ${name}. The rooms were immaculate and the breakfast was delicious.`,
-          `Comfortable beds, fast Wi-Fi, and courteous housekeeping. Perfect for a restful getaway!`,
-          `Excellent location and peaceful atmosphere. Front desk team was polite and accommodating.`,
-          `Peaceful atmosphere with clean amenities and great room service. Highly recommended!`,
-          `Great value for money with pristine amenities and very well-maintained premises.`,
-          `From warm welcome to hassle-free checkout, our stay at ${name} was wonderful!`,
-          `Spacious rooms with modern interior fittings and scenic views. Loved our time here!`,
-          `Buffet breakfast spread was lavish and delicious. Attentive dining staff as well.`,
-          `Housekeeping staff ensured everything remained spotless and replenished daily.`,
-          `Very safe and secure premises with 24/7 polite front desk assistance.`,
-          `Convenient parking and central location close to key city attractions.`,
-          `Crisp bed linens, quiet air conditioning, and top quality room amenities.`,
-          `Check-in was completed in under two minutes with a refreshing welcome drink!`,
-          `Peaceful resort vibe with well-manicured gardens and relaxing pool area.`,
-          `Courteous bellhop and concierge who gave great local sightseeing recommendations.`,
-          `Ideal hotel for both business travelers and relaxing family vacations.`,
-          `Very accommodating management who assisted with our late checkout request.`,
-          `Spotless bathrooms with hot water and premium toiletries at ${name}.`,
-          `Calm and luxurious ambiance throughout the property. Exceeded our expectations!`,
-          `Loved the prompt room service and delicious late-night snacks.`,
-          `Top-notch hospitality standards and immaculate cleanliness everywhere!`,
-          `A truly memorable stay with warm staff and luxurious comforts at ${name}.`
+          `Smooth check-in and peaceful stay throughout. Staff was always helpful and smiling.`,
+          `Had a memorable stay at ${name}. Rooms were very clean and breakfast was delicious.`,
+          `Comfortable beds, fast Wi-Fi, and polite housekeeping. Perfect for a restful trip!`,
+          `Great location and peaceful atmosphere. Front desk team was polite and accommodating.`,
+          `Quiet rooms with clean bathrooms and fast room service. Highly recommended!`,
+          `Great value for money with neat rooms and very well-maintained property.`,
+          `From warm welcome to quick checkout, our stay at ${name} was wonderful!`,
+          `Spacious rooms with comfortable beds and nice views. Loved our time here!`,
+          `Breakfast spread was fresh and delicious. Attentive dining staff as well.`,
+          `Housekeeping team kept our room very clean and neat every day.`,
+          `Very safe and secure hotel with 24/7 polite front desk assistance.`,
+          `Easy parking and good location close to key areas in the city.`,
+          `Fresh bed sheets, quiet AC, and good room amenities.`,
+          `Check-in was done in under two minutes with a friendly greeting!`,
+          `Peaceful vibe with green gardens and clean surroundings.`,
+          `Courteous front desk team who helped with local travel directions.`,
+          `Ideal hotel for both work trips and relaxing family vacations.`,
+          `Very helpful management who accommodated our late checkout request.`,
+          `Spotless bathrooms with hot water and clean towels at ${name}.`,
+          `Peaceful and comfortable atmosphere throughout. Very happy with the stay!`,
+          `Loved the prompt room service and delicious hot snacks.`,
+          `Top quality hospitality and clean premises everywhere!`,
+          `A truly comfortable stay with warm staff and cozy rooms at ${name}.`
         ];
       case 'Retail & Shopping':
         return [
           `Great collection and very helpful staff at ${name}!`,
-          `Wide variety of quality products with transparent pricing. Fast billing and polite customer support.`,
-          `Always a pleasure shopping at ${name}. Trendy collections and a very neat store layout!`,
-          `Found exactly what I was looking for at great prices. The store associates were so helpful.`,
-          `Well-organized aisles and fresh inventory. Seamless shopping experience every visit!`,
-          `High quality merchandise and prompt billing counter service. Loved shopping here!`,
-          `Courteous staff who guide you without any pushiness. Best retail store in town!`,
-          `Fantastic discount offers and premium quality items. Definitely coming back for more!`,
-          `Neat displays and wide selection across all price ranges at ${name}.`,
+          `Wide variety of quality products with fair prices. Fast billing and polite support.`,
+          `Always love shopping at ${name}. Trendy collections and very neat store layout!`,
+          `Found exactly what I needed at a good price. Staff was very helpful.`,
+          `Neat displays and fresh stock. Smooth shopping experience every visit!`,
+          `High quality items and quick billing counter. Loved shopping here!`,
+          `Helpful staff who guide you politely without any pressure. Best shop in town!`,
+          `Great discount offers and genuine quality items. Definitely coming back for more!`,
+          `Neat shelves and wide selection across all budgets at ${name}.`,
           `Store associates helped me pick the right size with a lot of patience.`,
-          `Speedy checkout counter with multiple payment options. No long queues!`,
-          `Authentic branded products with clear return and exchange policies.`,
-          `Fresh arrivals every season with great variety in designs and colors.`,
-          `Air-conditioned store with spacious trial rooms and courteous attendants.`,
-          `Great festive discounts and genuine quality assurance on all merchandise.`,
-          `Staff greeted us warmly and answered all product queries patiently.`,
-          `Found premium quality products at very reasonable and competitive prices.`,
-          `Clean, well-lit store floor that makes browsing products a pleasure.`,
-          `Convenient store location with ample parking and polite security staff.`,
-          `Very helpful manager who resolved an exchange query in seconds.`,
-          `Outstanding customer service and wide selection of latest designs at ${name}.`,
-          `Best shopping destination in town for quality and affordability!`,
+          `Quick checkout with multiple payment options. No long queues!`,
+          `Genuine branded items with clear exchange policies.`,
+          `New designs and fresh arrivals in great colors every season.`,
+          `Clean air-conditioned store with spacious trial rooms and polite attendants.`,
+          `Great festival discounts and genuine quality on all items.`,
+          `Staff greeted us warmly and answered all questions patiently.`,
+          `Found good quality products at very reasonable and competitive prices.`,
+          `Clean, bright store floor that makes browsing products easy and fun.`,
+          `Convenient shop location with easy parking and polite staff.`,
+          `Very helpful store manager who helped with my request in seconds.`,
+          `Great customer service and wide selection of trending designs at ${name}.`,
+          `Best shopping place in the area for quality and affordable prices!`,
           `Neat packaging and pleasant shopping atmosphere from start to finish.`,
           `Consistent high quality and polite staff every time I visit ${name}!`
         ];
       case 'Salon & Spa':
         return [
           `Skilled professionals and relaxing service at ${name}!`,
-          `Punctual appointments with top-grade hygiene standards. The stylists listen attentively to what you want.`,
-          `Left ${name} feeling refreshed and rejuvenated. Calming ambiance and high-end products!`,
-          `Expert hair styling and very attentive personal care. Absolutely love my new look!`,
-          `Soothing vibe, spotless stations, and very polite therapists. Worth every penny!`,
-          `Top-notch skincare treatment and relaxing massage. Felt completely pampered!`,
-          `Friendly team who take time to understand your style preferences before starting.`,
+          `On-time appointments with clean hygiene standards. Stylists listen carefully to what you want.`,
+          `Left ${name} feeling fresh and relaxed. Calming vibe and quality products!`,
+          `Expert hair styling and polite personal care. Absolutely love my new look!`,
+          `Relaxing vibe, clean chairs, and very polite stylists. Worth every rupee!`,
+          `Great skincare treatment and relaxing massage. Felt completely refreshed!`,
+          `Friendly team who take time to understand your style preference.`,
           `Consistently five-star service and warm hospitality. Highly recommend visiting ${name}!`,
-          `Sanitized tools and disposable towels used for every service. Very hygienic!`,
-          `Relaxing aroma and peaceful ambiance that immediately melts away stress.`,
-          `The stylist gave wonderful hair care tips tailored to my hair type.`,
-          `Painless waxing and precision facial treatment by experienced estheticians.`,
-          `Appointments run on time with no unnecessary waiting in the lounge.`,
-          `High-end branded hair and skin products used with transparent pricing.`,
+          `Sanitized tools and clean towels used for every service. Very hygienic!`,
+          `Pleasant fragrance and peaceful setup that helps you relax completely.`,
+          `The stylist gave helpful hair care tips suited to my hair type.`,
+          `Gentle skin care and neat facial treatment by experienced staff.`,
+          `Appointments start right on time with no unnecessary waiting.`,
+          `Good quality hair and skin products used with clear, honest pricing.`,
           `Loved the foot massage and pedicure at ${name}. Pure relaxation!`,
-          `Stylists are creative and really know the latest hair color trends.`,
-          `Warm herbal tea and polite reception staff. Truly luxury salon experience!`,
+          `Stylists are creative and know the latest trending haircuts.`,
+          `Warm greeting and polite reception staff. Truly enjoyable salon visit!`,
           `Gentle scalp massage and refreshing hair spa. Hair feels so soft and healthy!`,
-          `Spotless mirrors, clean styling chairs, and friendly staff throughout.`,
-          `Very reasonable grooming packages with top notch finishing touches.`,
-          `The facial treatment gave my skin an amazing natural glow. Thank you ${name}!`,
-          `Polite therapists who check on your comfort level throughout the session.`,
-          `Exceeded all expectations with flawless hair styling and manicure!`,
+          `Clean mirrors, sanitized chairs, and friendly staff throughout.`,
+          `Very affordable grooming packages with great finishing touches.`,
+          `The facial treatment gave my skin a healthy, natural glow. Thank you ${name}!`,
+          `Polite staff who check on your comfort throughout the session.`,
+          `Flawless hair styling and neat grooming service at ${name}!`,
           `My go-to salon for all grooming needs. Professional and courteous team!`
         ];
       case 'Automotive & Garage':
         return [
-          `Honest diagnosis and timely service at ${name}!`,
-          `Skilled mechanics with fair estimates and transparent billing. Delivered my vehicle right on schedule.`,
-          `Extremely dependable service center at ${name}. Used genuine parts and car runs like new!`,
-          `Clear explanation of necessary repairs without any hidden charges. Truly trustworthy team.`,
-          `Prompt turnaround time and courteous customer care. Vehicle feels completely refreshed.`,
-          `Professional diagnostic tools, clean workshop, and polite service advisors.`,
-          `Great attention to detail during routine maintenance and oil service. Highly satisfied!`,
-          `Best garage experience I've had. Fair rates, genuine advice, and top quality workmanship.`,
-          `Fixed a persistent suspension issue that other garages could not solve. Brilliant mechanics!`,
-          `Clean customer lounge with Wi-Fi while waiting for periodic car service.`,
-          `Itemized service bill with old replaced parts shown transparently.`,
-          `Car was delivered thoroughly washed, vacuumed, and polished. Looks brand new!`,
-          `Engine runs smoother and fuel economy improved noticeably after servicing at ${name}.`,
-          `Fast puncture and wheel alignment service with modern computer calibration.`,
-          `Honest mechanics who didn't push unnecessary part replacements. Very ethical!`,
-          `Quick brake inspection and safe test drive before vehicle handover.`,
-          `Towing and emergency breakdown assistance was fast and reassuring.`,
-          `Dependable electrical fault diagnosis and prompt wiring fix.`,
-          `Fair quotation shared upfront before starting any major repair work.`,
-          `Experienced mechanics who treat your vehicle with utmost care and respect.`,
-          `AC cooling repaired efficiently with genuine refrigerant gas refilled.`,
-          `Service advisor kept me updated via WhatsApp throughout the maintenance process.`,
-          `Highly trustworthy automobile service workshop in the area. 5 stars!`,
-          `Smooth vehicle handover with spotless cleaning and timely delivery.`
+          `Honest service and on-time delivery at ${name}!`,
+          `Skilled mechanics with fair estimates and clear billing. Delivered my vehicle right on time.`,
+          `Very reliable service center at ${name}. Used genuine parts and car runs like new!`,
+          `Clear explanation of required repairs without any hidden charges. Trustworthy team.`,
+          `Quick repair turnaround and polite customer care. Car feels completely smooth.`,
+          `Modern diagnostic tools, clean workshop, and polite service advisors.`,
+          `Great attention to detail during oil change and general checkup. Highly satisfied!`,
+          `Best garage experience I've had. Fair rates, honest advice, and quality work.`,
+          `Fixed my car problem quickly that others could not solve. Skilled mechanics!`,
+          `Clean waiting area with cool drinking water while waiting for car service.`,
+          `Clear service bill with replaced parts shown transparently.`,
+          `Car was washed clean, vacuumed, and delivered on schedule. Looks fresh!`,
+          `Engine runs smoother and car drives great after servicing at ${name}.`,
+          `Fast tire check and wheel alignment with computer calibration.`,
+          `Honest mechanics who never push unnecessary replacements. Very trustworthy!`,
+          `Quick brake check and safe test drive before handing over vehicle.`,
+          `Breakdown assistance was quick, reassuring, and very helpful.`,
+          `Reliable electrical diagnosis and quick wiring repair.`,
+          `Fair quote shared upfront before starting any work. No surprises!`,
+          `Experienced mechanics who treat your vehicle with good care.`,
+          `AC cooling repaired quickly with genuine gas refilled. Cold AC now!`,
+          `Service advisor kept me updated via phone during the repair process.`,
+          `Highly trustworthy vehicle service workshop in the area. 5 stars!`,
+          `Smooth car handover with neat cleaning and on-time delivery.`
         ];
       case 'Gym & Fitness Center':
         return [
-          `Modern equipment and motivating environment at ${name}!`,
-          `Spacious workout floor with attentive certified trainers. Clean locker rooms and great workout energy.`,
-          `Best fitness facility in the area at ${name}. Modern machines and supportive community vibe!`,
-          `Trainers provide personalized guidance on form and workouts. Seeing great results!`,
-          `Very hygienic workout area with well-maintained free weights and cardio equipment.`,
-          `Inspiring playlist, positive fitness crowd, and encouraging trainers every single day.`,
-          `Great variety of workout zones and classes. Always look forward to my sessions here!`,
-          `Exceptional gym management, clean showers, and excellent personal coaching staff!`,
-          `Spacious crossfit area and high quality branded dumbells and barbells.`,
-          `Trainers correct your posture patiently to prevent workout injuries.`,
-          `Sanitized benches and wiping stations readily available across the gym floor.`,
-          `Airy ventilation and cool temperature maintained even during peak morning hours.`,
-          `Diet and nutritional guidance provided alongside structured workout charts.`,
-          `Very polite front desk and convenient operational hours from early morning to night.`,
-          `Great energetic group workout batches including Zumba and HIIT sessions.`,
-          `Machines are oiled and maintained regularly with zero squeaks or downtime.`,
-          `Clean water dispensers and safe lockers with biometric access control.`,
-          `Supportive gym members and motivating community vibe for beginners!`,
-          `Personal training sessions are goal-oriented and have helped me transform my fitness.`,
-          `Plenty of cardio treadmills and ellipticals so there is never any waiting queue.`,
-          `Best investment for fitness and health. Highly recommend joining ${name}!`,
-          `Knowledgeable trainers who motivate you to push your limits safely.`,
-          `Clean changing rooms, hot showers, and hygienic steam bath facilities.`,
-          `Energetic atmosphere that makes working out an enjoyable daily habit!`
+          `Modern equipment and motivating vibe at ${name}!`,
+          `Spacious workout floor with helpful certified trainers. Clean locker rooms and great energy.`,
+          `Best fitness gym in the area at ${name}. Modern machines and supportive vibe!`,
+          `Trainers give personal guidance on workout form. Seeing great fitness results!`,
+          `Very clean workout area with well-kept weights and cardio machines.`,
+          `Energetic music, positive crowd, and encouraging trainers every day.`,
+          `Great variety of workout machines. Always look forward to exercising here!`,
+          `Helpful gym management, clean showers, and polite coaching staff!`,
+          `Spacious floor area and good quality dumbbells and barbells.`,
+          `Trainers correct your exercise posture patiently to avoid injuries.`,
+          `Sanitized benches and cleaning wipes available across the workout floor.`,
+          `Good air ventilation and cool temperature kept even during busy mornings.`,
+          `Helpful diet and workout guidance provided for fitness goals.`,
+          `Very polite front desk and convenient opening hours from morning to night.`,
+          `Energetic workout batches and fun fitness sessions.`,
+          `Machines are oiled and maintained smoothly with zero issues.`,
+          `Clean drinking water and safe lockers for gym members.`,
+          `Supportive gym community that encourages beginners!`,
+          `Personal training sessions helped me improve my strength and stamina.`,
+          `Plenty of treadmills and cycles so there is never any waiting line.`,
+          `Best choice for health and fitness. Highly recommend joining ${name}!`,
+          `Knowledgeable trainers who motivate you to stay fit safely.`,
+          `Clean changing rooms, hot showers, and neat facilities.`,
+          `Energetic atmosphere that makes daily workouts fun and easy!`
         ];
       case 'Education & Coaching':
         return [
           `Dedicated teachers and personal attention at ${name}!`,
-          `Structured curriculum with clear concept clarity. The mentors are encouraging and clarify doubts patiently.`,
-          `Outstanding learning academy at ${name}. Excellent faculty and well-planned study materials.`,
-          `Student-friendly environment where teachers go the extra mile to build confidence.`,
-          `Interactive classes with regular progress assessments that keep students on track.`,
-          `Very professional faculty and focused guidance for exam preparations. Highly recommended!`,
-          `Doubt clearing sessions are thorough and motivating. Great improvement in test scores!`,
-          `Inspiring teachers who make complex topics easy and fun to learn. Excellent institute!`,
-          `Well-researched study modules and periodic mock tests that boost exam confidence.`,
-          `Small batch sizes ensure every student gets individual attention and feedback.`,
-          `Parents are kept informed about academic progress and attendance regularly.`,
-          `Air-conditioned classrooms with smart projectors and comfortable seating.`,
-          `Teachers simplify difficult mathematical and scientific concepts effortlessly.`,
-          `Encouraging mentors who focus on conceptual depth rather than rote memorization.`,
-          `Great library facility and quiet reading room for focused self-study.`,
-          `Career counseling and interview preparation workshops were immensely helpful.`,
-          `Polite administrative team who assist with study schedules and test series.`,
-          `Significant improvement in marks and subject confidence within a few months!`,
-          `Regular doubt-solving desks available after regular lectures. Very helpful!`,
-          `Motivational atmosphere that inspires students to achieve their academic goals.`,
-          `Experienced teaching faculty with proven track records of top rankers.`,
-          `Very disciplined yet caring educational environment at ${name}.`,
-          `Affordable fee structure with high quality academic mentoring.`,
-          `The best coaching academy for competitive exam preparation in the city!`
+          `Clear lessons and simple explanations. Teachers are encouraging and clear all doubts patiently.`,
+          `Great learning academy at ${name}. Helpful faculty and well-organized study materials.`,
+          `Friendly learning atmosphere where teachers build students' confidence.`,
+          `Interactive classes with regular mock tests that keep students prepared.`,
+          `Helpful faculty and focused guidance for exam success. Highly recommended!`,
+          `Doubt clearing sessions are easy to understand. Great improvement in marks!`,
+          `Inspiring teachers who make difficult topics simple and fun to learn.`,
+          `Good study notes and practice tests that build real exam confidence.`,
+          `Small batches so every student gets personal attention and feedback.`,
+          `Parents are updated about attendance and student progress regularly.`,
+          `Clean classrooms with good lighting and comfortable seating.`,
+          `Teachers explain math and science concepts in a very simple way.`,
+          `Encouraging mentors who make sure students understand concepts clearly.`,
+          `Good library facility and quiet reading space for study.`,
+          `Helpful study guidance and exam tips given by teachers.`,
+          `Polite office staff who help with class schedules and test papers.`,
+          `Noticeable improvement in marks and subject confidence within a few months!`,
+          `Regular doubt-solving time after class. Very helpful!`,
+          `Positive environment that inspires students to achieve high scores.`,
+          `Experienced teaching faculty who guide every student with care.`,
+          `Disciplined and caring learning environment at ${name}.`,
+          `Affordable fees with high quality teaching for all subjects.`,
+          `The best coaching academy for students in the city!`
         ];
       default:
         return [
           `Great experience at ${name}, very polite and helpful staff!`,
-          `Prompt response and high-quality service from start to finish. The team is professional and reliable.`,
-          `Thoroughly impressed by the dedication and professionalism at ${name}. Outstanding results!`,
-          `Smooth communication, transparent pricing, and timely delivery of service. Highly recommend!`,
-          `The team goes above and beyond to ensure customer satisfaction. Very pleased!`,
-          `Courteous, knowledgeable staff and top-tier professionalism throughout.`,
-          `Hassle-free experience with quick turnaround. Will definitely be a returning customer!`,
-          `Consistently reliable and friendly customer care. Exceeded all my expectations!`,
-          `Very trustworthy business with transparent dealings and honest communication.`,
-          `Prompt customer support that addressed all my questions with utmost patience.`,
-          `Clean, well-maintained premises and polite greeting right at the entrance.`,
-          `High standards of professionalism and very organized service delivery at ${name}.`,
-          `Delivered on their promises with zero delays or hidden fees. Very impressed!`,
-          `Helpful team who explained every detail clearly before proceeding.`,
-          `Extremely satisfied with the overall experience and quality of assistance.`,
-          `Smooth, professional, and efficient service. Highly recommend to everyone!`,
-          `Always a pleasure dealing with ${name}. Reliable, prompt, and courteous.`,
-          `Very accommodating management who made our requirements their top priority.`,
-          `Exceptional attention to customer needs and flawless execution throughout.`,
-          `Fair pricing, top quality results, and friendly staff every single time.`,
-          `Quick turnaround time without compromising on quality or craftsmanship.`,
-          `The staff treats customers with great respect and genuine warmth.`,
+          `Quick response and high quality work from start to finish. Team is professional and reliable.`,
+          `Very happy with the work done by ${name}. Great results!`,
+          `Clear communication, fair pricing, and on-time service. Highly recommend!`,
+          `The team took great care of us. Very happy with the service!`,
+          `Polite staff and quick work throughout. Great experience at ${name}!`,
+          `Smooth and hassle-free service. Will definitely come back again!`,
+          `Friendly customer support and dependable team. Exceeded my expectations!`,
+          `Clean place, fair rates, and honest team at ${name}. 5 stars!`,
+          `Delivered on their promise right on time with no delays. Very happy!`,
+          `Helpful staff who explained everything clearly and politely before starting.`,
+          `Smooth, quick, and efficient service. Highly recommend to everyone!`,
+          `Always a pleasure dealing with ${name}. Reliable, quick, and polite.`,
+          `Very helpful management who understood our needs right away.`,
+          `Great attention to customer requests and neat work throughout.`,
+          `Fair pricing, good quality results, and friendly staff every single time.`,
+          `Quick turnaround time with great quality of work.`,
+          `Staff treats customers with great respect and warm smiles.`,
           `One of the most dependable businesses in town. Will definitely visit again!`,
-          `Professionalism at its finest. Thank you ${name} for a great experience!`
+          `Great service and friendly people. Thank you ${name} for a great experience!`
         ];
     }
   };
 
   // Curated 4-liner review generator (guarantees the 2nd suggestion is strictly a detailed 4-liner review)
-  const getCuratedFourLiner = (categoryKey, name, lang = 'english') => {
+  const getCuratedFourLiner = (categoryKey, name, lang = 'english', keywords = '') => {
+    const kwList = (keywords || '').split(',').map(k => k.trim()).filter(Boolean);
+    const topKw = kwList[0] || '';
+
     if (lang === 'telugu') {
       switch (categoryKey) {
         case 'Restaurant & Cafe':
-          return `${name} లో భోజనం చాలా అద్భుతంగా ఉంది. ప్రతి వంటకం ఎంతో తాజా రుచితో మరియు పరిశుభ్రంగా వడ్డించారు. సిబ్బంది ఆతిథ్యం మరియు వాతావరణం ఎంతో ఆహ్లాదకరంగా అనిపించాయి. కుటుంబంతో కలిసి రావడానికి ఇది అత్యుత్తమ రెస్టారెంట్!`;
+          return `${name} లో భోజనం చాలా అద్భుతంగా ఉంది. ${topKw ? `ప్రత్యేకించి ${topKw} మరియు ప్రతి వంటకం ఎంతో తాజా రుచితో వడ్డించారు.` : 'ప్రతి వంటకం ఎంతో తాజా రుచితో మరియు పరిశుభ్రంగా వడ్డించారు.'} సిబ్బంది ఆతిథ్యం మరియు వాతావరణం ఎంతో ఆహ్లాదకరంగా అనిపించాయి. కుటుంబంతో కలిసి రావడానికి ఇది అత్యుత్తమ రెస్టారెంట్!`;
         case 'Healthcare & Clinic':
-          return `${name} లో వైద్య సేవలు ఎంతో సంతృప్తికరంగా ఉన్నాయి. వైద్యులు సమస్యను శ్రద్ధగా విని ఎంతో ఓపికగా పరిష్కారం వివరించారు. క్లినిక్ చాలా శుభ్రంగా ఉంది మరియు సిబ్బంది ఎంతో సహాయకారిగా ఉన్నారు. ఉత్తమ వైద్య సంరక్షణ కోసం తప్పక సిఫార్సు చేస్తున్నాను!`;
+          return `${name} లో వైద్య సేవలు ఎంతో సంతృప్తికరంగా ఉన్నాయి. ${topKw ? `వైద్యులు ${topKw} మరియు ఇతర సమస్యలను శ్రద్ధగా విని ఎంతో ఓపికగా పరిష్కారం వివరించారు.` : 'వైద్యులు సమస్యను శ్రద్ధగా విని ఎంతో ఓపికగా పరిష్కారం వివరించారు.'} క్లినిక్ చాలా శుభ్రంగా ఉంది మరియు సిబ్బంది ఎంతో సహాయకారిగా ఉన్నారు. ఉత్తమ వైద్య సంరక్షణ కోసం తప్పక సిఫార్సు చేస్తున్నాను!`;
         case 'Hotel & Resort':
-          return `${name} లో మా బస ఎంతో ప్రశాంతంగా మరియు ఆహ్లాదకరంగా గడిచింది. గదులు చాలా విశాలంగా, శుభ్రంగా మరియు అన్ని సౌకర్యాలతో ఉన్నాయి. సిబ్బంది ఎంతో మర్యాదగా మాట్లాడి ప్రతి విషయంలో వేగంగా స్పందించారు. తప్పకుండా మళ్లీ ఇక్కడే బస చేస్తాము!`;
+          return `${name} లో మా బస ఎంతో ప్రశాంతంగా మరియు ఆహ్లాదకరంగా గడిచింది. ${topKw ? `గదులు చాలా విశాలంగా, ${topKw} మరియు అన్ని ఆధునిక సౌకర్యాలతో ఉన్నాయి.` : 'గదులు చాలా విశాలంగా, శుభ్రంగా మరియు అన్ని సౌకర్యాలతో ఉన్నాయి.'} సిబ్బంది ఎంతో మర్యాదగా మాట్లాడి ప్రతి విషయంలో వేగంగా స్పందించారు. తప్పకుండా మళ్లీ ఇక్కడే బస చేస్తాము!`;
         case 'Retail & Shopping':
-          return `${name} లో షాపింగ్ అనుభవం చాలా బాగుంది. ఇక్కడ ఎన్నో రకాల తాజా కలెక్షన్స్ మరియు నాణ్యమైన వస్తువులు అందుబాటులో ఉన్నాయి. సిబ్బంది ప్రతి వస్తువు గురించి ఎంతో ఓపికగా వివరించారు. ధరలు కూడా చాలా సరసమైనవిగా ఉన్నాయి!`;
+          return `${name} లో షాపింగ్ అనుభవం చాలా బాగుంది. ${topKw ? `ఇక్కడ ${topKw} మరియు ఎన్నో రకాల తాజా కలెక్షన్స్ నాణ్యమైన వస్తువులు అందుబాటులో ఉన్నాయి.` : 'ఇక్కడ ఎన్నో రకాల తాజా కలెక్షన్స్ మరియు నాణ్యమైన వస్తువులు అందుబాటులో ఉన్నాయి.'} సిబ్బంది ప్రతి వస్తువు గురించి ఎంతో ఓపికగా వివరించారు. ధరలు కూడా చాలా సరసమైనవిగా ఉన్నాయి!`;
         case 'Salon & Spa':
-          return `${name} లో సర్వీస్ ఎంతో అద్భుతంగా ఉంది. నిపుణులైన స్టైలిస్ట్స్ మన అభిరుచికి తగినట్లుగా చాలా శ్రద్ధగా పనిచేశారు. ఇక్కడి పరిశుభ్రత మరియు ప్రశాంతమైన వాతావరణం ఎంతో నచ్చాయి. సరికొత్త లుక్ తో చాలా సంతోషంగా అనిపిస్తోంది!`;
+          return `${name} లో సర్వీస్ ఎంతో అద్భుతంగా ఉంది. ${topKw ? `నిపుణులైన స్టైలిస్ట్స్ ${topKw} ని మన అభిరుచికి తగినట్లుగా చాలా శ్రద్ధగా చేశారు.` : 'నిపుణులైన స్టైలిస్ట్స్ మన అభిరుచికి తగినట్లుగా చాలా శ్రద్ధగా పనిచేశారు.'} ఇక్కడి పరిశుభ్రత మరియు ప్రశాంతమైన వాతావరణం ఎంతో నచ్చాయి. సరికొత్త లుక్ తో చాలా సంతోషంగా అనిపిస్తోంది!`;
         case 'Automotive & Garage':
-          return `${name} లో వాహనం సర్వీస్ చాలా నమ్మకంగా చేశారు. మెకానిక్స్ సమస్యను త్వరగా గుర్తించి పారదర్శకమైన బిల్లింగ్ అందించారు. సమయానికి వాహనాన్ని వాష్ చేసి కొత్తదానిలా డెలివరీ చేశారు. నిజాయితీ గల సర్వీస్ సెంటర్!`;
+          return `${name} లో వాహనం సర్వీస్ చాలా నమ్మకంగా చేశారు. ${topKw ? `మెకానిక్స్ ${topKw} మరియు ఇతర సమస్యలను త్వరగా గుర్తించి పారదర్శకమైన బిల్లింగ్ అందించారు.` : 'మెకానిక్స్ సమస్యను త్వరగా గుర్తించి పారదర్శకమైన బిల్లింగ్ అందించారు.'} సమయానికి వాహనాన్ని వాష్ చేసి కొత్తదానిలా డెలివరీ చేశారు. నిజాయితీ గల సర్వీస్ సెంటర్!`;
         case 'Gym & Fitness Center':
-          return `${name} లో వ్యాయామం చేయడం ఎంతో ఉత్సాహాన్ని ఇస్తుంది. ఆధునిక పరికరాలు మరియు సర్టిఫైడ్ ట్రైనర్స్ ఎంతో మంచి గైడెన్స్ ఇస్తున్నారు. పరిశుభ్రత మరియు సౌకర్యాలు చాలా ఉన్నతంగా ఉన్నాయి. ఫిట్‌నెస్ లక్ష్యాలు సాధించడానికి ఇది సరైన ప్రదేశం!`;
+          return `${name} లో వ్యాయామం చేయడం ఎంతో ఉత్సాహాన్ని ఇస్తుంది. ${topKw ? `ఆధునిక పరికరాలు, ${topKw} మరియు సర్టిఫైడ్ ట్రైనర్స్ ఎంతో మంచి గైడెన్స్ ఇస్తున్నారు.` : 'ఆధునిక పరికరాలు మరియు సర్టిఫైడ్ ట్రైనర్స్ ఎంతో మంచి గైడెన్స్ ఇస్తున్నారు.'} పరిశుభ్రత మరియు సౌకర్యాలు చాలా ఉన్నతంగా ఉన్నాయి. ఫిట్‌నెస్ లక్ష్యాలు సాధించడానికి ఇది సరైన ప్రదేశం!`;
         case 'Education & Coaching':
-          return `${name} లో విద్యా బోధన ఎంతో ప్రమాణాలతో కూడుకుని ఉంది. అధ్యాపకులు ప్రతి విషయాన్ని ఎంతో స్పష్టంగా అర్థమయ్యేలా బోధిస్తున్నారు. క్రమం తప్పకుండా పరీక్షలు నిర్వహిస్తూ విద్యార్థుల్లో విశ్వాసాన్ని పెంచుతున్నారు. అత్యుత్తమ కోచింగ్ అకాడమీ!`;
+          return `${name} లో విద్యా బోధన ఎంతో ప్రమాణాలతో కూడుకుని ఉంది. ${topKw ? `అధ్యాపకులు ${topKw} తో పాటు ప్రతి విషయాన్ని ఎంతో స్పష్టంగా అర్థమయ్యేలా బోధిస్తున్నారు.` : 'అధ్యాపకులు ప్రతి విషయాన్ని ఎంతో స్పష్టంగా అర్థమయ్యేలా బోధిస్తున్నారు.'} క్రమం తప్పకుండా పరీక్షలు నిర్వహిస్తూ విద్యార్థుల్లో విశ్వాసాన్ని పెంచుతున్నారు. అత్యుత్తమ కోచింగ్ అకాడమీ!`;
         default:
-          return `Project work super గా చేశారు, staff response కూడా చాలా బాగుంది. ఇచ్చిన మాట ప్రకారం సమయానికి పని పూర్తి చేశారు. నాణ్యత మరియు సహకారం రెండూ ఎంతో సంతృప్తికరంగా ఉన్నాయి. మంచి సర్వీస్ కోరుకునే ప్రతి ఒక్కరికీ ${name} ని తప్పక సిఫార్సు చేస్తున్నాను!`;
+          return `Project work super గా చేశారు, staff response కూడా చాలా బాగుంది. ${topKw ? `ప్రత్యేకించి ${topKw} నాణ్యత ఎంతో బాగుంది మరియు సకాలంలో పని పూర్తి చేశారు.` : 'ఇచ్చిన మాట ప్రకారం సమయానికి పని పూర్తి చేశారు.'} నాణ్యత మరియు సహకారం రెండూ ఎంతో సంతృప్తికరంగా ఉన్నాయి. మంచి సర్వీస్ కోరుకునే ప్రతి ఒక్కరికీ ${name} ని తప్పక సిఫార్సు చేస్తున్నాను!`;
       }
     }
 
     if (lang === 'tenglish') {
       switch (categoryKey) {
         case 'Restaurant & Cafe':
-          return `Food super ga undi, ambiance kuda chala bagundi at ${name}. Starters and main course rendu fresh ga, delicious taste tho icharu. Staff hospitality chala courteous ga undi, order fast ga vachindi. Family dinner ki perfect spot, definitely recommend chestanu!`;
+          return `Food super ga undi, ambiance kuda chala bagundi at ${name}. ${topKw ? `Specially ${topKw} and starters fresh ga, delicious taste tho serve chesaru.` : 'Starters and main course rendu fresh ga, delicious taste tho icharu.'} Staff hospitality chala courteous ga undi, order fast ga vachindi. Family dinner ki perfect spot, definitely recommend chestanu!`;
         case 'Healthcare & Clinic':
-          return `${name} lo consultation experience chala bagundi. Doctor garu problem chala patient ga vini clear ga explain chesaru. Clinic premises spotless ga maintain chesaru with minimal waiting time. Best medical care in the area, highly recommended!`;
+          return `${name} lo consultation experience chala bagundi. ${topKw ? `Doctor garu ${topKw} and health queries chala patient ga vini clear ga explain chesaru.` : 'Doctor garu problem chala patient ga vini clear ga explain chesaru.'} Clinic premises spotless ga maintain chesaru with minimal waiting time. Best medical care in the area, highly recommended!`;
         case 'Hotel & Resort':
-          return `Our stay at ${name} was peaceful and very comfortable. Rooms chala clean ga, spacious ga modern amenities tho unnayi. Front desk staff chala polite ga receive chesukuni fast check-in chesaru. Great hospitality and definitely will visit again!`;
+          return `Our stay at ${name} was peaceful and very comfortable. ${topKw ? `Rooms chala clean ga, ${topKw} and modern amenities tho super ga maintain chesaru.` : 'Rooms chala clean ga, spacious ga modern amenities tho unnayi.'} Front desk staff chala polite ga receive chesukuni fast check-in chesaru. Great hospitality and definitely will visit again!`;
         case 'Retail & Shopping':
-          return `${name} lo shopping experience chala bagundi. Latest trending collections and genuine quality products available ga unnayi. Staff associates product details chala patient ga explain chesaru. Billing fast ga jarigindi with very reasonable prices!`;
+          return `${name} lo shopping experience chala bagundi. ${topKw ? `Latest trending collections and genuine quality ${topKw} available ga unnayi.` : 'Latest trending collections and genuine quality products available ga unnayi.'} Staff associates product details chala patient ga explain chesaru. Billing fast ga jarigindi with very reasonable prices!`;
         case 'Salon & Spa':
-          return `${name} lo styling and grooming session super ga undi. Stylists chala skilled ga unnaru and exactly manam korukunnate chesaru. High-grade hygienic tools and top products use chesaru. Very relaxing experience, felt totally refreshed!`;
+          return `${name} lo styling and grooming session super ga undi. ${topKw ? `Stylists chala skilled ga unnaru and ${topKw} perfectly execute chesaru.` : 'Stylists chala skilled ga unnaru and exactly manam korukunnate chesaru.'} High-grade hygienic tools and top products use chesaru. Very relaxing experience, felt totally refreshed!`;
         case 'Automotive & Garage':
-          return `${name} lo vehicle servicing chala professional ga chesaru. Mechanics accurate diagnosis chesi upfront estimate icharu. Car performance super ga undi and right on time deliver chesaru. Highly dependable garage with fair charges!`;
+          return `${name} lo vehicle servicing chala professional ga chesaru. ${topKw ? `Mechanics ${topKw} issue accurate ga diagnose chesi upfront estimate icharu.` : 'Mechanics accurate diagnosis chesi upfront estimate icharu.'} Car performance super ga undi and right on time deliver chesaru. Highly dependable garage with fair charges!`;
         case 'Gym & Fitness Center':
-          return `Best gym in the area with modern machines and great workout vibe. Trainers personal attention tho exercise posture chala patient ga guide chestaru. Locker rooms clean ga unnayi and fitness atmosphere super ga undi. Highly recommend joining ${name}!`;
+          return `Best gym in the area with modern machines and great workout vibe. ${topKw ? `Trainers ${topKw} and workout posture personal attention tho chala patient ga guide chestaru.` : 'Trainers personal attention tho exercise posture chala patient ga guide chestaru.'} Locker rooms clean ga unnayi and fitness atmosphere super ga undi. Highly recommend joining ${name}!`;
         case 'Education & Coaching':
-          return `${name} lo coaching and guidance super ga undi. Faculty concepts chala simple ga explain chesi doubts patient ga clarify chestaru. Study material and regular tests exams ki full confidence istayi. Best academy for academic success!`;
+          return `${name} lo coaching and guidance super ga undi. ${topKw ? `Faculty ${topKw} and core concepts chala simple ga explain chesi doubts clarify chestaru.` : 'Faculty concepts chala simple ga explain chesi doubts patient ga clarify chestaru.'} Study material and regular tests exams ki full confidence istayi. Best academy for academic success!`;
         default:
-          return `Project work super ga chesaru, staff response kuda chala bagundi. Timely delivery chesi clear communication maintain chesaru. Quality and service standards rendu top-notch ga unnayi. Anyone looking for reliable work, definitely recommend ${name}!`;
+          return `Project work super ga chesaru, staff response kuda chala bagundi. ${topKw ? `Specially ${topKw} quality standard top-notch ga undi and timely deliver chesaru.` : 'Timely delivery chesi clear communication maintain chesaru.'} Quality and service standards rendu top-notch ga unnayi. Anyone looking for reliable work, definitely recommend ${name}!`;
       }
     }
 
-    // Default: 'english'
+    // Default: 'english' (Very Simple, 100% Positive Everyday English)
     switch (categoryKey) {
       case 'Restaurant & Cafe':
-        return `Had an unforgettable dining experience at ${name}. The dishes were freshly prepared with authentic flavors and generous portion sizes. The staff was incredibly attentive and the ambiance was warm and inviting. Highly recommend visiting with friends and family!`;
+        return `Had a great meal at ${name}. ${topKw ? `Their ${topKw} was hot, fresh, and very tasty.` : 'The dishes were freshly prepared and very tasty.'} The staff was polite, welcoming, and served us quickly. Highly recommend visiting with friends and family!`;
       case 'Healthcare & Clinic':
-        return `Visited ${name} for consultation and had an exceptional experience. The doctors listened patiently, explained everything clearly, and made me feel completely at ease. The clinic premises are spotless with minimal waiting time. Truly grateful for the wonderful medical care!`;
+        return `Visited ${name} for consultation and had a wonderful experience. ${topKw ? `The doctor listened patiently and explained ${topKw} very clearly.` : 'The doctor listened patiently and explained everything very clearly.'} The clinic is very clean with short waiting times. Truly grateful for the wonderful medical care!`;
       case 'Hotel & Resort':
-        return `Our stay at ${name} was comfortable and thoroughly relaxing. The rooms were spacious, spotless, and equipped with all modern amenities. The front desk staff was polite, welcoming, and assisted with every request promptly. Will definitely choose to stay here again!`;
+        return `Our stay at ${name} was comfortable and very pleasant. ${topKw ? `The rooms were clean, quiet, and equipped with ${topKw}.` : 'The rooms were spacious, clean, and very quiet.'} The front desk staff was polite, welcoming, and assisted with every request. Will definitely stay here again!`;
       case 'Retail & Shopping':
-        return `Always a pleasure shopping at ${name}. They have an incredible variety of trendy collections and authentic quality products. The store associates were courteous and helped me find exactly what I needed. Checkout was fast with very transparent pricing!`;
+        return `Always a pleasure shopping at ${name}. ${topKw ? `They have a great collection of ${topKw} and quality products.` : 'They have a great collection of quality products.'} The store staff was polite and helped me find what I needed. Checkout was quick with fair prices!`;
       case 'Salon & Spa':
-        return `Had a wonderful grooming session at ${name} today. The stylists are highly skilled, patient, and understand your preferences perfectly. Top-grade hygienic tools and premium products were used throughout. Left feeling completely refreshed and rejuvenated!`;
+        return `Had a wonderful grooming session at ${name} today. ${topKw ? `The stylists are skilled and did ${topKw} exactly as I wanted.` : 'The stylists are skilled, patient, and did a great job.'} Clean tools and quality products were used throughout. Left feeling happy and refreshed!`;
       case 'Automotive & Garage':
-        return `Exceptional vehicle service and maintenance at ${name}. The mechanics diagnosed the issue accurately and shared a transparent cost estimate upfront. My vehicle was delivered right on schedule and runs like brand new. Highly dependable garage with fair rates!`;
+        return `Great vehicle service and maintenance at ${name}. ${topKw ? `The mechanics checked ${topKw} carefully and shared a fair estimate upfront.` : 'The mechanics diagnosed the problem accurately and gave a fair quote.'} My vehicle was delivered right on time and runs smoothly. Highly dependable garage with fair rates!`;
       case 'Gym & Fitness Center':
-        return `Best fitness facility in the area with modern equipment and great energy. The certified trainers guide you with personal attention and ensure proper workout form. Locker rooms and workout floors are cleaned constantly. Seeing great results and highly recommend joining ${name}!`;
+        return `Best fitness gym in the area with modern equipment and great energy. ${topKw ? `The certified trainers guide you with personal attention, especially for ${topKw}.` : 'The certified trainers guide you with personal attention and proper form.'} The workout floor and locker rooms are cleaned regularly. Seeing great fitness results and highly recommend ${name}!`;
       case 'Education & Coaching':
-        return `Outstanding learning academy with dedicated and knowledgeable faculty at ${name}. Concepts are taught with great clarity and doubt-clearing sessions are very thorough. The study materials and regular mock assessments keep students confident. Truly the best coaching institute!`;
+        return `Outstanding learning academy with dedicated and caring teachers at ${name}. ${topKw ? `Their ${topKw} lessons and concepts are taught clearly and simply.` : 'Concepts are taught with great clarity and doubt-clearing sessions are very helpful.'} Regular tests and study materials keep students confident. Truly the best coaching institute!`;
       default:
-        return `Had a truly wonderful experience dealing with ${name}. The entire team was professional, courteous, and prompt in addressing all queries. The quality of work delivered was flawless and right on schedule. Highly recommended to anyone looking for reliable and trustworthy service!`;
+        return `Had a wonderful experience dealing with ${name}. ${topKw ? `Their ${topKw} and work quality was great and completed right on time.` : 'The quality of work was great and completed right on time.'} The entire team was professional, polite, and prompt in addressing all queries. Highly recommended to anyone looking for reliable service!`;
     }
   };
 
@@ -1107,18 +1106,47 @@ export default function CustomerReviewForm({
     const kwList = (keywords || '').split(',').map(k => k.trim()).filter(Boolean);
     const copy = [...base];
     if (kwList.length > 0) {
-      if (lang === 'english') {
-        copy.unshift(`Great experience at ${name}, especially loved the ${kwList[0]}! Wonderful service and courteous team.`);
-      } else {
-        copy.unshift(`${name} lo ${kwList[0]} super ga undi! Service chala bagundi.`);
-      }
-    }
-    if (kwList.length > 1) {
-      if (lang === 'english') {
-        copy.unshift(`Highly impressed by the ${kwList[1]} and warm hospitality at ${name}. Will definitely be returning!`);
-      } else {
-        copy.unshift(`${kwList[1]} quality super ga undi at ${name}. Definitely recommend chestanu!`);
-      }
+      const kwCards = [];
+      const englishTemplates = [
+        (kw) => `Great experience at ${name}, especially loved the ${kw}! Quick service and polite team.`,
+        (kw) => `Loved the ${kw} and friendly staff at ${name}. Will definitely visit again!`,
+        (kw) => `The ${kw} here is super tasty and fresh! Very happy with the service at ${name}.`,
+        (kw) => `Best place for ${kw} in the area! Quick service and friendly staff at ${name}.`,
+        (kw) => `Had a wonderful time at ${name}. The ${kw} was very good! Highly recommend.`,
+        (kw) => `Consistently great experience at ${name}. Their ${kw} and customer care are very good!`
+      ];
+      const teluguTemplates = [
+        (kw) => `${name} లో ${kw} చాలా బాగుంది! సర్వీస్ ఎంతో బాగుంది మరియు సిబ్బంది ఎంతో మర్యాదగా ఉన్నారు.`,
+        (kw) => `${name} లో ${kw} క్వాలిటీ సూపర్ గా ఉంది. ఖచ్చితంగా మళ్ళీ వస్తాము!`,
+        (kw) => `${kw} ఇక్కడ చాలా అద్భుతంగా ఉంది. సిబ్బంది మంచి మర్యాదతో త్వరగా సర్వ్ చేశారు.`,
+        (kw) => `${name} లో ${kw} కోసం తప్పకుండా వెళ్ళవచ్చు. చాలా నచ్చింది!`,
+        (kw) => `${name} లో సర్వీస్ అద్భుతం, ప్రత్యేకించి ${kw} నాణ్యత ఎంతో సంతృప్తికరంగా ఉంది.`
+      ];
+      const tenglishTemplates = [
+        (kw) => `${name} lo ${kw} super ga undi! Service chala bagundi and staff polite ga unnaru.`,
+        (kw) => `${kw} quality super ga undi at ${name}. Definitely recommend chestanu!`,
+        (kw) => `Ikada ${kw} chala bagundi, quick service and courteous team at ${name}.`,
+        (kw) => `${name} lo ${kw} experience super ga undi, 5 stars for the team!`,
+        (kw) => `Best place for ${kw}! Friendly staff and super quick response at ${name}.`,
+        (kw) => `Loved the ${kw} here! Timely delivery and super quality at ${name}.`
+      ];
+
+      kwList.forEach((kw, idx) => {
+        let text = '';
+        if (lang === 'english') {
+          const fn = englishTemplates[idx % englishTemplates.length];
+          text = fn(kw);
+        } else if (lang === 'telugu') {
+          const fn = teluguTemplates[idx % teluguTemplates.length];
+          text = fn(kw);
+        } else {
+          const fn = tenglishTemplates[idx % tenglishTemplates.length];
+          text = fn(kw);
+        }
+        if (text) kwCards.push(text);
+      });
+
+      return [...kwCards, ...copy];
     }
     return copy;
   };
@@ -1135,10 +1163,38 @@ export default function CustomerReviewForm({
   const freshGemini = (geminiSuggestions || []).filter(item => !isReviewUsed(item, usedReviews));
   const freshFallbacks = (shuffledFallbacks || []).filter(item => !isReviewUsed(item, usedReviews));
 
+  const activeKeywords = (clientKeywords || '')
+    .split(',')
+    .map(k => k.trim().toLowerCase())
+    .filter(Boolean);
+
+  const getKeywordMatchScore = (text) => {
+    if (!activeKeywords.length || !text) return 0;
+    const lower = text.toLowerCase();
+    let score = 0;
+    for (const kw of activeKeywords) {
+      if (lower.includes(kw)) score += 1;
+    }
+    return score;
+  };
+
+  const combinedCandidates = [...freshGemini, ...freshFallbacks];
+  // Sort candidates so keyword-rich reviews are prioritized at the top of the list
+  const prioritizedCandidates = activeKeywords.length > 0
+    ? [...combinedCandidates].sort((a, b) => {
+        const scoreB = getKeywordMatchScore(b);
+        const scoreA = getKeywordMatchScore(a);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        const aIsGemini = freshGemini.includes(a) ? 1 : 0;
+        const bIsGemini = freshGemini.includes(b) ? 1 : 0;
+        return bIsGemini - aIsGemini;
+      })
+    : combinedCandidates;
+
   const candidatePool = [];
   const seenNorm = new Set();
 
-  for (const item of [...freshGemini, ...freshFallbacks]) {
+  for (const item of prioritizedCandidates) {
     const norm = normalizeReviewText(item);
     if (!norm || seenNorm.has(norm) || isReviewUsed(item, usedReviews)) continue;
     seenNorm.add(norm);
@@ -1151,14 +1207,14 @@ export default function CustomerReviewForm({
     let dynamicFillers = [];
     if (reviewLang === 'english') {
       dynamicFillers = [
-        `Delighted with the service and attention to detail at ${clientName}. Truly wonderful!`,
-        `Very polite staff and prompt assistance at ${clientName}. Exceeded my expectations!`,
-        `Had a fantastic experience at ${clientName}. Will definitely recommend to everyone!`,
-        `Consistent quality and wonderful customer hospitality at ${clientName}. 5 stars!`,
-        `Smooth, hassle-free and very dependable service at ${clientName}!`,
-        `Loved how courteous and attentive the entire team was at ${clientName}.`,
-        `Top-notch standards and very pleasant atmosphere at ${clientName}!`,
-        `Super clean premises and highly skilled team at ${clientName}. Highly recommended!`
+        `Great service and very friendly staff at ${clientName}. Truly wonderful!`,
+        `Very polite staff and quick assistance at ${clientName}. Highly satisfied!`,
+        `Had a wonderful experience at ${clientName}. Will definitely recommend to everyone!`,
+        `Consistently good quality and great hospitality at ${clientName}. 5 stars!`,
+        `Smooth, hassle-free and dependable service at ${clientName}!`,
+        `Loved how polite and helpful the entire team was at ${clientName}.`,
+        `Very clean premises and pleasant atmosphere at ${clientName}!`,
+        `Neat place and skilled team at ${clientName}. Highly recommended!`
       ];
     } else {
       dynamicFillers = [
@@ -1184,7 +1240,7 @@ export default function CustomerReviewForm({
   }
 
   // Strictly guarantee that the 2nd suggestion option (index 1) is a comprehensive 4-liner review
-  const curatedFourLiner = getCuratedFourLiner(activeCategoryKey, clientName, reviewLang);
+  const curatedFourLiner = getCuratedFourLiner(activeCategoryKey, clientName, reviewLang, clientKeywords);
   if (candidatePool.length >= 2) {
     candidatePool[1] = curatedFourLiner;
   } else if (candidatePool.length === 1) {
@@ -1221,26 +1277,29 @@ export default function CustomerReviewForm({
     showCopyToast('Copied , Paste in Google Review');
   };
 
-  const handleGenerateGeminiSuggestions = async (targetLang = reviewLang) => {
+  const handleGenerateGeminiSuggestions = async (targetLang = reviewLang, forceFresh = false) => {
     // 1. Client-Side Memoization Check:
-    // If we already fetched suggestions for this language in this session, re-use instantly!
-    const memoized = geminiMemoRef.current[targetLang];
-    if (Array.isArray(memoized) && memoized.length > 0) {
-      const freshUnused = memoized.filter(item => !isReviewUsed(item, usedReviews));
-      if (freshUnused.length >= 4) {
-        setGeminiSuggestions(freshUnused);
-        setAiSource('gemini');
-        return; // Zero network latency, instant tab switch!
+    // If we already fetched suggestions for this language in this session, re-use instantly UNLESS forceFresh is true!
+    if (!forceFresh) {
+      const memoized = geminiMemoRef.current[targetLang];
+      if (Array.isArray(memoized) && memoized.length > 0) {
+        const freshUnused = memoized.filter(item => !isReviewUsed(item, usedReviews));
+        if (freshUnused.length >= 4) {
+          setGeminiSuggestions(freshUnused);
+          setAiSource('gemini');
+          return; // Zero network latency, instant tab switch!
+        }
       }
     }
 
     setIsGeneratingAi(true);
     setAiNotice(
       targetLang === 'english'
-        ? 'Generating English review options...'
-        : 'Generating Tenglish review options...'
+        ? 'Generating fresh English review options...'
+        : 'Generating fresh Tenglish review options...'
     );
     try {
+      const currentCards = forceFresh && Array.isArray(displayedSuggestions) ? displayedSuggestions : [];
       const res = await fetch(`${config.API_BASE_URL}/api/public/ai/suggestions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1250,7 +1309,7 @@ export default function CustomerReviewForm({
           keywords: clientKeywords,
           clientId: client?.id,
           qrId: qrInfo?.qrId || qrId,
-          excludeReviews: usedReviews,
+          excludeReviews: [...usedReviews, ...currentCards],
           language: targetLang
         })
       });
@@ -1261,7 +1320,7 @@ export default function CustomerReviewForm({
         geminiMemoRef.current[targetLang] = data.suggestions;
         setGeminiSuggestions(freshUnused);
         setAiSource('gemini');
-        setAiNotice('✨ Fresh review suggestions ready');
+        setAiNotice('✨ 8 new review suggestions ready');
       } else {
         setGeminiSuggestions([]);
       }
@@ -1272,6 +1331,24 @@ export default function CustomerReviewForm({
       setIsGeneratingAi(false);
       setTimeout(() => setAiNotice(''), 3000);
     }
+  };
+
+  const handleGenerateNewComments = () => {
+    if (isGeneratingAi) return;
+    setIsSwitchingTab(true);
+    setSelectedSuggestion('');
+    setSelectedChip('');
+    setComments('');
+
+    // Re-shuffle fallback cards with dynamic variants
+    setShuffledFallbacks(shuffleSuggestions(getCategoryFallbacks(activeCategoryKey, clientName, clientKeywords, reviewLang)));
+
+    // Fetch completely fresh suggestions from Gemini AI
+    handleGenerateGeminiSuggestions(reviewLang, true);
+
+    setTimeout(() => {
+      setIsSwitchingTab(false);
+    }, 350);
   };
 
   const handleLanguageSelect = (newLang) => {
@@ -1697,7 +1774,7 @@ export default function CustomerReviewForm({
             /* ============================================================
                Interactive Customer Review Form (Compact & Official)
                ============================================================ */
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="customer-review-form">
               {error && !isNetworkFetchError(error) && (
                 <div style={{
                   display: 'flex',
@@ -1717,7 +1794,7 @@ export default function CustomerReviewForm({
               )}
 
               {/* 1. Choose from 8 AI-Crafted Review Options with Internal Scrollbar */}
-              <div className="form-group" style={{ marginBottom: '14px' }}>
+              <div className="form-group customer-suggestions-group">
                 <div className="suggestions-section-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <MessageSquareText size={15} style={{ color: 'var(--primary, #8B5CF6)' }} />
@@ -1725,26 +1802,42 @@ export default function CustomerReviewForm({
                       Choose a comment <span style={{ color: 'var(--danger)' }}>*</span>
                     </span>
                   </div>
-                  {/* 2-Option Review Language Toggle (Sequence: English, Tenglish) */}
-                  <div className="review-lang-toggle" role="radiogroup" aria-label="Review Language">
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {/* Shuffle Button to get fresh new comments on customer screen */}
                     <button
                       type="button"
-                      className={`lang-pill-btn ${reviewLang === 'english' ? 'active' : ''}`}
-                      onClick={() => handleLanguageSelect('english')}
-                      id="btn-lang-english"
-                      title="English reviews"
+                      className="btn-shuffle-comments btn-generate-fresh-comments"
+                      onClick={handleGenerateNewComments}
+                      disabled={isGeneratingAi || isSwitchingTab}
+                      title="Shuffle to see new review comments"
+                      id="btn-customer-shuffle-comments"
                     >
-                      English
+                      <Shuffle size={12} className={isGeneratingAi ? 'animate-spin' : ''} />
+                      <span>{isGeneratingAi ? 'Shuffling...' : 'Shuffle'}</span>
                     </button>
-                    <button
-                      type="button"
-                      className={`lang-pill-btn ${reviewLang === 'tenglish' ? 'active' : ''}`}
-                      onClick={() => handleLanguageSelect('tenglish')}
-                      id="btn-lang-tenglish"
-                      title="Tenglish (Telugu words in English letters, e.g. Super ga undi!)"
-                    >
-                      Tenglish
-                    </button>
+
+                    {/* 2-Option Review Language Toggle (Sequence: English, Tenglish) */}
+                    <div className="review-lang-toggle" role="radiogroup" aria-label="Review Language">
+                      <button
+                        type="button"
+                        className={`lang-pill-btn ${reviewLang === 'english' ? 'active' : ''}`}
+                        onClick={() => handleLanguageSelect('english')}
+                        id="btn-lang-english"
+                        title="English reviews"
+                      >
+                        English
+                      </button>
+                      <button
+                        type="button"
+                        className={`lang-pill-btn ${reviewLang === 'tenglish' ? 'active' : ''}`}
+                        onClick={() => handleLanguageSelect('tenglish')}
+                        id="btn-lang-tenglish"
+                        title="Tenglish (Telugu words in English letters, e.g. Super ga undi!)"
+                      >
+                        Tenglish
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1764,14 +1857,11 @@ export default function CustomerReviewForm({
                           tabIndex={0}
                           id={`review-option-pill-${idx + 1}`}
                         >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                            <div className="review-suggestion-text" style={{ flex: 1, paddingRight: '4px' }}>
-                              "{item}"
-                            </div>
-                            <div style={{ flexShrink: 0 }}>
+                          <div className="review-suggestion-content">
+                            <div className="review-badge-float">
                               {isSelected ? (
                                 <span className="review-copied-badge" title="Copied to clipboard">
-                                  <Check size={11} style={{ strokeWidth: 3 }} />
+                                  <Check size={11} style={{ strokeWidth: 2.5 }} />
                                   <span>Copied ✓</span>
                                 </span>
                               ) : (
@@ -1780,6 +1870,9 @@ export default function CustomerReviewForm({
                                   <span>Tap to Copy</span>
                                 </span>
                               )}
+                            </div>
+                            <div className="review-suggestion-text">
+                              "{item}"
                             </div>
                           </div>
                         </div>
@@ -1790,7 +1883,7 @@ export default function CustomerReviewForm({
               </div>
 
               {/* Customer Phone Number Input */}
-              <div className="form-group" style={{ marginBottom: '14px' }}>
+              <div className="form-group customer-phone-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
                   <label className="form-label" htmlFor="customer-phone" style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600 }}>
                     Mobile Number{' '}

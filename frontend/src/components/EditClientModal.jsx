@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Check, AlertCircle, Save, Building2, Phone, MapPin, QrCode, ExternalLink, Image as ImageIcon, Upload, Trash2, Map, Camera, Loader2 } from 'lucide-react';
+import { X, Check, AlertCircle, Save, Building2, Phone, MapPin, QrCode, ExternalLink, Image as ImageIcon, Upload, Trash2, Map, Camera, Loader2, CreditCard } from 'lucide-react';
 import QrCameraScannerModal from './QrCameraScannerModal';
 import { extractPlaceId, buildGoogleReviewUrl } from '../utils/placeId';
 import { cleanPhoneNumber, formatPhoneNumber } from '../utils/phone';
@@ -24,9 +24,11 @@ export default function EditClientModal({ client, onClose, onSaveSuccess }) {
   const [downloadingExternalLogo, setDownloadingExternalLogo] = useState(false);
   const [savedLocalLogoPath, setSavedLocalLogoPath] = useState('');
   const [isPhoneMandatory, setIsPhoneMandatory] = useState(Boolean(client.isPhoneMandatory));
+  const [subscriptionPlan, setSubscriptionPlan] = useState(client.subscriptionPlan || 'Starter Launch Trial (₹9)');
   const [qrId, setQrId] = useState(client.qrId || '');
   const [availableQrs, setAvailableQrs] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [availablePlans, setAvailablePlans] = useState([]);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
@@ -42,19 +44,25 @@ export default function EditClientModal({ client, onClose, onSaveSuccess }) {
     setShowScanner(false);
   };
 
-  // Fetch unassigned QRs and categories
+  // Fetch unassigned QRs, categories, and subscription plans
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [qrRes, catRes] = await Promise.all([
+        const [qrRes, catRes, planRes] = await Promise.all([
           fetch(`${config.API_BASE_URL}/api/qr/unassigned`),
-          fetch(`${config.API_BASE_URL}/api/categories`)
+          fetch(`${config.API_BASE_URL}/api/categories`),
+          fetch(`${config.API_BASE_URL}/api/subscription-plans?activeOnly=true`)
         ]);
         const qrData = await qrRes.json();
         if (qrData.qrs) setAvailableQrs(qrData.qrs);
 
         const catData = await catRes.json();
         if (catData.categories) setCategories(catData.categories);
+
+        const planData = await planRes.json();
+        if (planData.plans && Array.isArray(planData.plans)) {
+          setAvailablePlans(planData.plans);
+        }
       } catch (err) {
         console.error('Failed to load edit modal dependencies:', err);
       }
@@ -195,6 +203,7 @@ export default function EditClientModal({ client, onClose, onSaveSuccess }) {
           googleReviewUrl: buildGoogleReviewUrl(extractPlaceId(placeId || googleReviewUrl)) || googleReviewUrl.trim(),
           logoUrl: logoToSave,
           qrId: qrId.trim(),
+          subscriptionPlan: subscriptionPlan || 'Starter Launch Trial (₹9)',
           isPhoneMandatory: Boolean(isPhoneMandatory)
         })
       });
@@ -381,11 +390,11 @@ export default function EditClientModal({ client, onClose, onSaveSuccess }) {
 
             {/* 5. Google Place ID * (Mandatory) */}
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label className="form-label" htmlFor="edit-place-id">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label className="form-label" htmlFor="edit-place-id" style={{ marginBottom: 0 }}>
                   Google Place ID <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
-                <span style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 600 }}>Direct Write-Review Modal</span>
+                <span style={{ fontSize: '0.72rem', color: '#10B981', fontWeight: 600 }}>Direct Review Modal</span>
               </div>
               <div style={{ position: 'relative' }}>
                 <input
@@ -416,7 +425,10 @@ export default function EditClientModal({ client, onClose, onSaveSuccess }) {
                   className="form-textarea"
                   style={{ paddingLeft: '38px', minHeight: '70px' }}
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    setAddressAutoFilled(false);
+                  }}
                   required
                 />
                 <MapPin size={16} style={{ position: 'absolute', left: '12px', top: '16px', color: 'var(--text-muted)' }} />
@@ -822,6 +834,56 @@ export default function EditClientModal({ client, onClose, onSaveSuccess }) {
               <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                 If you change the QR code, the previous QR code will be released and returned to the generic empty pool.
               </span>
+            </div>
+
+            {/* Subscription Plan */}
+            <div className="form-group" style={{ marginTop: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label className="form-label" htmlFor="edit-subscription-plan" style={{ fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 0 }}>
+                  <CreditCard size={15} style={{ color: 'var(--primary)' }} />
+                  <span>Subscription Plan</span>
+                </label>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Active tier
+                </span>
+              </div>
+              <select
+                id="edit-subscription-plan"
+                className="form-select"
+                value={subscriptionPlan}
+                onChange={(e) => setSubscriptionPlan(e.target.value)}
+                style={{
+                  height: '40px',
+                  fontSize: '0.86rem',
+                  fontWeight: 600,
+                  color: 'var(--text-primary, #F8FAFC)',
+                  background: 'var(--bg-card, rgba(30, 27, 75, 0.6))',
+                  border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.15))',
+                  borderRadius: '8px',
+                  width: '100%',
+                  padding: '0 10px'
+                }}
+              >
+                {availablePlans.length > 0 ? (
+                  availablePlans.map((p) => (
+                    <option key={p.id} value={p.name} style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                      {p.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Starter Launch Free Trial" style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                      Starter Launch Free Trial
+                    </option>
+                    <option value="Business Pro Monthly (₹150/mo)" style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                      Business Pro Monthly (₹150/mo)
+                    </option>
+                    <option value="Multi-Outlet Customizer" style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                      Multi-Outlet Customizer
+                    </option>
+                  </>
+                )}
+              </select>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>

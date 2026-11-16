@@ -15,9 +15,19 @@ export function cleanPhoneNumber(phone) {
   // Strip non-digits
   const digits = str.replace(/\D/g, '');
 
+  // If starts with 091 and has 13 digits (e.g. 0919876543210)
+  if (digits.length === 13 && digits.startsWith('091')) {
+    return digits.slice(3);
+  }
+
   // If starts with 91 and has 12 digits (e.g. 919876543210)
   if (digits.length === 12 && digits.startsWith('91')) {
     return digits.slice(2);
+  }
+
+  // If starts with 0 and has 11 digits (e.g. 09876543210)
+  if (digits.length === 11 && digits.startsWith('0')) {
+    return digits.slice(1);
   }
 
   // If already 10 digits
@@ -31,6 +41,17 @@ export function cleanPhoneNumber(phone) {
   }
 
   return digits;
+}
+
+/**
+ * Validate whether a phone number is a valid 10-digit Indian mobile number (starts with 6, 7, 8, or 9)
+ * @param {string|number} phone 
+ * @returns {boolean}
+ */
+export function isValidIndianMobile(phone) {
+  if (!phone) return false;
+  const cleaned = cleanPhoneNumber(phone);
+  return /^[6-9]\d{9}$/.test(cleaned);
 }
 
 /**

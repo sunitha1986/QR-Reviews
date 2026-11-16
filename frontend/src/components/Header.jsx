@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Store, Sun, Moon, Menu, RefreshCw, QrCode, UserPlus } from 'lucide-react';
+import { Sun, Moon, Menu, RefreshCw, QrCode, UserPlus, ScanLine } from 'lucide-react';
 import sidebarLogo from '../assets/sidebar_logo.png';
 import headerWaveBanner from '../assets/header_wave_banner.jpg';
 
-export default function Header({ user, activeTab, theme, onToggleTheme, onToggleMobileMenu, onRefresh, onNavigate }) {
+export default function Header({ user, activeTab, theme, onToggleTheme, onToggleMobileMenu, onRefresh, onNavigate, onOpenQuickScanner }) {
   const isSuperAdmin = user?.role === 'superadmin';
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -24,54 +24,6 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
     }
   };
 
-  const tabTitles = {
-    'dashboard': {
-      title: 'Dashboard Overview',
-      subtitle: 'Real-time platform metrics, active standees and customer review performance'
-    },
-    'new-qr': {
-      title: 'New QR Generation',
-      subtitle: 'Create and manage dynamic QR codes for your clients'
-    },
-    'onboard': {
-      title: 'Onboarding Client',
-      subtitle: 'Integrate dynamic QR codes with business name, phone number, and address'
-    },
-    'clients': {
-      title: 'All Clients',
-      subtitle: 'View all onboarded businesses, assigned QR codes, and real-time review statistics'
-    },
-    'categories': {
-      title: 'Business Categories',
-      subtitle: 'Manage dynamic commercial categories, review templates, and business classifications'
-    },
-    'analytics': {
-      title: 'Performance Analytics',
-      subtitle: 'In-depth customer review analytics, scan activity, and growth metrics'
-    },
-    'settings': {
-      title: 'System Settings',
-      subtitle: 'Platform preferences, security credentials, and portal configurations'
-    },
-    'profile': {
-      title: 'Business Profile',
-      subtitle: 'Manage your business information and your assigned dynamic QR standee'
-    },
-    'keywords': {
-      title: 'Review Keywords & Highlights',
-      subtitle: 'Customize business keywords and specialties to generate high-converting customer reviews'
-    },
-    'customer-data': {
-      title: 'Customer Data & Feedback',
-      subtitle: 'Review customer submissions, sentiment, and export data directly to Excel sheets'
-    }
-  };
-
-  const currentInfo = tabTitles[activeTab] || {
-    title: 'Dashboard',
-    subtitle: 'QR-Reviews Management'
-  };
-
   return (
     <header className="top-bar">
       {/* Background Banner Graphic (Loaded once, cached across every page) */}
@@ -82,11 +34,16 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
         className="header-wave-banner"
       />
 
-      {/* Desktop Header Content */}
+      {/* Desktop Header Content - Constant Branding */}
       <div className="desktop-header-content">
-        <div className="page-info">
-          <h2>{currentInfo.title}</h2>
-          <p>{currentInfo.subtitle}</p>
+        <div className="header-brand-constant">
+          <div className="header-brand-icon">
+            <img src={sidebarLogo} alt="QR Reviews Logo" className="header-brand-logo-img" />
+          </div>
+          <div className="header-brand-titles">
+            <h2 className="header-brand-name">QR Reviews</h2>
+            <p className="header-brand-tagline">Turn QR scans into Trusted reviews</p>
+          </div>
         </div>
 
         <div className="top-actions">
@@ -117,6 +74,22 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             </div>
           )}
 
+          {/* Quick Scanner Action Button */}
+          {onOpenQuickScanner && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm header-action-btn"
+              onClick={onOpenQuickScanner}
+              title="Quick QR Standee Scanner (Beep & Instant Review)"
+              id="btn-header-quick-scan"
+              aria-label="Scan QR Standee"
+              style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+              <ScanLine size={15} style={{ color: '#10B981' }} />
+              <span className="desktop-only-inline" style={{ fontSize: '0.78rem' }}>Scan QR</span>
+            </button>
+          )}
+
           {/* Refresh Action Button */}
           <button
             type="button"
@@ -144,23 +117,23 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             aria-label="Toggle theme"
           >
             {theme === 'dark' ? (
-              <Sun size={15} style={{ color: '#FBBF24' }} />
+              <Sun size={16} className="theme-toggle-icon sun-icon" />
             ) : (
-              <Moon size={15} style={{ color: '#6366F1' }} />
+              <Moon size={16} className="theme-toggle-icon moon-icon" />
             )}
           </button>
         </div>
       </div>
 
-      {/* Mobile Header Bar matching Mockup */}
+      {/* Mobile Header Bar matching Constant Branding */}
       <div className="mobile-header-content">
         <div className="mobile-brand-group">
           <div className="mobile-brand-icon">
-            <img src={sidebarLogo} alt="QR-Reviews Logo" className="brand-logo-img" />
+            <img src={sidebarLogo} alt="QR Reviews Logo" className="brand-logo-img" />
           </div>
           <div className="mobile-brand-titles">
-            <h1 className="mobile-brand-name">QR-Reviews</h1>
-            <p className="mobile-brand-role">{isSuperAdmin ? 'SUPERADMIN PORTAL' : 'ADMIN PORTAL'}</p>
+            <h1 className="mobile-brand-name">QR Reviews</h1>
+            <p className="mobile-brand-tagline">Turn QR scans into Trusted reviews</p>
           </div>
         </div>
 
@@ -191,6 +164,19 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             </>
           )}
 
+          {onOpenQuickScanner && (
+            <button
+              type="button"
+              className="mobile-header-icon-btn"
+              onClick={onOpenQuickScanner}
+              title="Scan QR Standee"
+              aria-label="Scan QR Standee"
+              id="btn-mobile-quick-scan"
+            >
+              <ScanLine size={16} style={{ color: '#10B981' }} />
+            </button>
+          )}
+
           <button
             type="button"
             className="mobile-header-icon-btn"
@@ -214,7 +200,11 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
             aria-label="Toggle theme"
           >
-            {theme === 'dark' ? <Sun size={18} style={{ color: '#FBBF24' }} /> : <Moon size={18} style={{ color: '#6366F1' }} />}
+            {theme === 'dark' ? (
+              <Sun size={18} className="theme-toggle-icon sun-icon" />
+            ) : (
+              <Moon size={18} className="theme-toggle-icon moon-icon" />
+            )}
           </button>
 
           <button

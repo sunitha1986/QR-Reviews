@@ -228,10 +228,19 @@ async function generateReviewSuggestions({
   excludeReviews = [],
   language = 'mixed'
 }) {
-  const keywordsSection = keywords && keywords.trim()
-    ? `\n\nBUSINESS HIGHLIGHTS & KEYWORDS:
-The business has specified these key features/specialties: "${keywords.trim()}".
-Naturally weave these specific highlights and keywords into several of the review suggestions so they feel authentic, directly relevant to the ${businessType} business, and helpful to prospective customers.`
+  const kwList = keywords
+    ? String(keywords).split(',').map(k => k.trim()).filter(Boolean)
+    : [];
+
+  const keywordsSection = kwList.length > 0
+    ? `\n\nCRITICAL REQUIREMENT - HIGHEST PREFERENCE TO BUSINESS KEYWORDS:
+The business owner has specified these signature features, specialties, or services:
+${kwList.map((kw, i) => `  ${i + 1}. "${kw}"`).join('\n')}
+
+YOU MUST PRIORITIZE THESE KEYWORDS ABOVE GENERAL PRAISE:
+1. At least 5 to 6 of the 8 suggestions (minimum 70-80%) MUST prominently and directly feature one or more of these exact keywords: [${kwList.map(k => `"${k}"`).join(', ')}].
+2. Distribute the keywords across the suggestions so each keyword gets highlighted (e.g., recommend their "${kwList[0]}", praise the quality of their "${kwList[1] || kwList[0]}", mention "${kwList[2] || kwList[0]}", etc.).
+3. DO NOT write vague, generic reviews (like "great service" or "good place") without mentioning these specific business highlights. Anchor the customer praise around these exact keywords so reviews provide strong local SEO value and authentic context.`
     : '';
 
   const recentExcludes = (excludeReviews || [])
@@ -258,8 +267,16 @@ Examples of exact style:
 - "చాలా మంచి సర్వీస్, సిబ్బంది ఎంతో మర్యాదగా ఉన్నారు."
 - "Quality super గా ఉంది, సరసమైన ధరలు మరియు సకాలంలో డెలివరీ."`;
   } else if (language === 'english') {
-    languageSection = `\n\nLANGUAGE REQUIREMENT (STRICT - ENGLISH ONLY):
-Write ALL 8 review suggestions strictly in clear, natural, everyday English.`;
+    languageSection = `\n\nLANGUAGE REQUIREMENT (STRICT - VERY SIMPLE, CLEAN ENGLISH):
+Write ALL 8 review suggestions strictly in VERY SIMPLE, everyday conversational English.
+Use short, common words that normal everyday people use in casual Google reviews.
+DO NOT use fancy, formal, pompous, or complex vocabulary (NEVER use words like "culinary excellence", "exceeded expectations", "immaculate", "unmatched", "exemplary", "plethora", "rejuvenated", "bespoke").
+Examples of exact simple style:
+- "Great experience at ${businessName}, the food was hot, fresh, and very tasty!"
+- "Staff was very polite and helpful. Quick service!"
+- "Clean place and fair prices. Loved the service!"
+- "Had a great time with family at ${businessName}. Highly recommend!"
+- "Fast service, friendly staff, and great quality. 5 stars!"`;
   } else {
     // Default: 'tenglish' / 'mixed' (Telugu words written in English alphabet)
     languageSection = `\n\nLANGUAGE REQUIREMENT (STRICT - TENGLISH / TELUGU IN ENGLISH SCRIPT):
@@ -275,22 +292,24 @@ Examples of exact style:
 STRICT RULE: Write in Latin/English letters only. Do NOT use Telugu script characters in Tenglish mode.`;
   }
 
-  const prompt = `You are an everyday customer writing an authentic Google review for "${businessName}" (${businessType}).
-Write exactly 8 distinct, authentic customer review suggestions for a ${rating}-star experience with structured lengths:
-- Suggestion 1: 2-liner review (2 clear sentences).
-- Suggestion 2: MUST STRICTLY BE A DETAILED 4-LINER REVIEW (exactly 4 sentences covering overall experience, staff courtesy, quality/ambiance, and high recommendation).
-- Suggestion 3: 3-liner review (3 sentences).
-- Suggestion 4: 2-liner review (2 sentences).
-- Suggestion 5: 3-liner review (3 sentences).
-- Suggestion 6: 4-liner review (4 sentences).
-- Suggestion 7: 2-liner review (2 sentences).
-- Suggestion 8: 3-liner review (3 sentences).${languageSection}${keywordsSection}${excludeSection}
+  const prompt = `You are a happy, satisfied customer writing a 5-star Google review for "${businessName}" (${businessType}).
+Write exactly 8 distinct, authentic, and 100% positive customer review suggestions for a 5-star experience with structured lengths:
+- Suggestion 1: 2-liner review (2 clear, simple sentences).
+- Suggestion 2: MUST STRICTLY BE A SIMPLE 4-LINER REVIEW (exactly 4 simple sentences: sentence 1 general experience, sentence 2 highlight/keywords, sentence 3 staff courtesy, sentence 4 strong recommendation).
+- Suggestion 3: 3-liner review (3 simple sentences).
+- Suggestion 4: 2-liner review (2 simple sentences).
+- Suggestion 5: 3-liner review (3 simple sentences).
+- Suggestion 6: 4-liner review (4 simple sentences).
+- Suggestion 7: 2-liner review (2 simple sentences).
+- Suggestion 8: 3-liner review (3 simple sentences).${languageSection}${keywordsSection}${excludeSection}
 
 STRICT RULES:
-1. Use simple, natural everyday customer language. No corporate jargon, flowery marketing words, or robotic AI phrasing.
-2. The 2nd suggestion in the JSON array MUST be a full 4-liner review (exactly 4 sentences).
-3. Return ONLY a valid JSON array of exactly 8 strings: ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4", "suggestion 5", "suggestion 6", "suggestion 7", "suggestion 8"].
-4. Do NOT include markdown formatting, backticks, numbering, or extra commentary.`;
+1. 100% POSITIVE PRAISE ONLY (ZERO NEGATIVE OR CRITICAL COMMENTS): Every single review suggestion MUST be 100% positive, delighted, and satisfied 5-star praise. Under NO circumstances include any negative, critical, lukewarm, hesitant, or mixed feedback (absolutely NO mentions of "crowded", "slow", "parking was tight", "could be better", "waiting time was long", or any complaints).
+2. VERY SIMPLE EVERYDAY ENGLISH: Use short, simple, easy-to-understand sentences (8 to 14 words max per sentence). Everyday customers write simple praises, not complex formal essays. No flowery, robotic, or corporate words.
+3. HIGHEST PREFERENCE TO KEYWORDS: When business keywords are provided, at least 70-80% of the suggestions (at least 5-6 out of 8) MUST explicitly, naturally, and simply include one or more of the specified keywords.
+4. The 2nd suggestion in the JSON array MUST be a simple 4-liner review (exactly 4 simple sentences).
+5. Return ONLY a valid JSON array of exactly 8 strings: ["suggestion 1", "suggestion 2", "suggestion 3", "suggestion 4", "suggestion 5", "suggestion 6", "suggestion 7", "suggestion 8"].
+6. Do NOT include markdown formatting, backticks, numbering, or extra commentary.`;
 
   try {
     const raw = await callGeminiWithFallback(prompt, 12000);

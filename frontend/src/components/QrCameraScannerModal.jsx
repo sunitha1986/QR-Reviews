@@ -13,7 +13,8 @@ import {
   AlertCircle,
   AlertTriangle,
   Building2,
-  ScanLine
+  ScanLine,
+  ExternalLink
 } from 'lucide-react';
 import config from '../config';
 
@@ -588,6 +589,29 @@ export default function QrCameraScannerModal({
               </p>
 
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <a
+                  href={`/${scannedResult.clientSlug || scannedResult.qrId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-sm"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#10B981',
+                    color: '#FFFFFF',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)'
+                  }}
+                  title="Open live customer review form in new tab"
+                >
+                  <ExternalLink size={13} />
+                  <span>Open Customer Review Page</span>
+                </a>
+
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"

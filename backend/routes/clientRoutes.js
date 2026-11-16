@@ -19,6 +19,9 @@ router.post('/change-password', AuthController.changePassword);
 // DELETE /api/clients/all (Must be before /:clientId)
 router.delete('/all', ClientController.removeAllClients);
 
+// GET /api/clients/lookup-place (Resolve Google Place ID to address)
+router.get('/lookup-place', ClientController.lookupPlaceDetails);
+
 // GET /api/clients/:clientId
 router.get('/:clientId', ClientController.getClientById);
 
@@ -27,6 +30,12 @@ router.get('/:clientId/keywords', ClientController.getClientKeywords);
 
 // PUT /api/clients/:clientId/keywords
 router.put('/:clientId/keywords', ClientController.updateClientKeywords);
+
+// PUT /api/clients/:clientId/theme
+router.put('/:clientId/theme', ClientController.updateClientTheme);
+
+// PUT /api/clients/:clientId/subscription
+router.put('/:clientId/subscription', ClientController.updateClientSubscription);
 
 // PUT /api/clients/:clientId
 router.put('/:clientId', ClientController.updateClient);

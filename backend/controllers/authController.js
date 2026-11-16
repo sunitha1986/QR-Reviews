@@ -69,7 +69,13 @@ class AuthController {
               name: matchedClient.name,
               role: 'admin',
               clientId: matchedClient.id,
-              qrId: matchedClient.qrId
+              qrId: matchedClient.qrId,
+              logoUrl: matchedClient.logoUrl || '',
+              businessLocation: matchedClient.businessLocation || matchedClient.address || '',
+              address: matchedClient.address || '',
+              businessType: matchedClient.businessType || '',
+              colorTheme: matchedClient.colorTheme || '',
+              subscriptionPlan: matchedClient.subscriptionPlan || 'Starter Launch Trial (₹9)'
             },
             token: 'token-client-' + matchedClient.id + '-' + Date.now()
           });

@@ -14,7 +14,9 @@ import {
   Calendar,
   Lock,
   KeyRound,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react';
 import PrintModal from '../../components/PrintModal';
 import { generateSlug, getClientReviewUrl } from '../../utils/slug';
@@ -23,8 +25,9 @@ import { formatPhoneNumber } from '../../utils/phone';
 import config, { getImageUrl } from '../../config';
 import { ClientProfileShimmer } from '../../components/Shimmer';
 import CopyablePhone from '../../components/CopyablePhone';
+import { applyColorTheme, getSavedThemeId } from '../../utils/colorThemes';
 
-export default function ClientProfile({ user, onTestReview, selectedClientId, onSelectClient }) {
+export default function ClientProfile({ user, onTestReview, selectedClientId, onSelectClient, onNavigate, hideClientSelector = false }) {
   const isSuperAdmin = user?.role === 'superadmin';
   const [allClients, setAllClients] = useState([]);
   const [activeClientId, setActiveClientId] = useState(selectedClientId || '');
@@ -98,6 +101,12 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
         const data = await res.json();
         if (data.client) {
           setClientData(data);
+          if (!isSuperAdmin) {
+            const bTheme = data.client.colorTheme || getSavedThemeId(data.client.id);
+            if (bTheme) {
+              applyColorTheme(bTheme, data.client.id);
+            }
+          }
         }
       } catch (err) {
         console.error('Failed to load client profile:', err);
@@ -251,7 +260,7 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
   return (
     <div className="fade-in">
       {/* Super Admin Client Switcher */}
-      {isSuperAdmin && (
+      {isSuperAdmin && !hideClientSelector && (
         <div className="glass-panel" style={{
           padding: '16px 22px',
           marginBottom: '20px',
@@ -326,60 +335,10 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* 1. Main Business Profile Information Card */}
           <div className="glass-panel" style={{ padding: '22px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-              {client.logoUrl ? (
-                <div style={{
-                  width: '62px',
-                  height: '62px',
-                  borderRadius: '14px',
-                  background: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '6px',
-                  boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
-                  border: '1px solid rgba(109, 36, 186, 0.18)',
-                  overflow: 'hidden',
-                  flexShrink: 0
-                }}>
-                  <img
-                    src={getImageUrl(client.logoUrl)}
-                    alt={client.name}
-                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                  />
-                </div>
-              ) : (
-                <div style={{
-                  width: '62px',
-                  height: '62px',
-                  borderRadius: '14px',
-                  background: 'linear-gradient(135deg, #7C3AED 0%, #06B6D4 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFF',
-                  fontSize: '1.6rem',
-                  fontWeight: 800,
-                  boxShadow: '0 6px 18px rgba(124, 58, 237, 0.35)',
-                  flexShrink: 0
-                }}>
-                  {client.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3 }}>
-                    {client.name}
-                  </h3>
-                  <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '0.68rem', padding: '2px 7px' }}>
-                    <ShieldCheck size={11} />
-                    <span>Verified</span>
-                  </span>
-                </div>
-                <span className="badge badge-primary" style={{ fontSize: '0.72rem' }}>
-                  {client.businessType || 'Partner Location'}
-                </span>
-              </div>
+            <div style={{ marginBottom: '18px', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', margin: 0, lineHeight: 1.3 }}>
+                Business Profile:
+              </h3>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.92rem' }}>
@@ -479,7 +438,7 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
               </div>
 
               {/* Onboarding Date & Status */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', paddingTop: '4px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', paddingTop: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                   <div style={{
                     width: '32px',
@@ -524,9 +483,53 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
                     </div>
                     <div style={{ color: '#10B981', fontWeight: 700, fontSize: '0.86rem', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
-                      <span>Active & Verified</span>
+                      <span>Active</span>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Subscription Plan */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', paddingTop: '6px', borderTop: '1px solid var(--border-subtle)' }}>
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '8px',
+                  background: 'rgba(139, 92, 246, 0.12)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <CreditCard size={17} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                    Subscription Plan
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>
+                      {client.subscriptionPlan || 'Starter Launch Trial (₹9)'}
+                    </span>
+                    <span className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
+                      Active Plan
+                    </span>
+                  </div>
+                  {onNavigate && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => onNavigate('subscriptions')}
+                        className="btn btn-primary btn-sm"
+                        style={{ fontSize: '0.76rem', padding: '4px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Sparkles size={12} />
+                        <span>Change / Upgrade Plan</span>
+                        <ArrowRight size={11} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -726,16 +729,18 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
-              <div className="qr-preview-container" style={{ width: '250px' }}>
+              <div className="qr-preview-container" style={{ width: '250px', maxWidth: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                 <img
                   src={qrUrl}
-                  alt={`QR Code ${qrId}`}
+                  alt="Dynamic QR Code"
                   className="qr-preview-img"
-                  style={{ width: '195px', height: '195px' }}
+                  style={{ width: '195px', height: '195px', maxWidth: '100%', objectFit: 'contain' }}
                 />
-                <div className="qr-code-label">
-                  {qrId}
-                </div>
+                {isSuperAdmin && (
+                  <div className="qr-code-label">
+                    {qrId}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -744,13 +749,13 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
               <label className="form-label" style={{ fontSize: '0.78rem', fontWeight: 600 }}>
                 Direct Customer Review Link
               </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                 <input
                   type="text"
                   className="form-input"
                   readOnly
                   value={reviewLink}
-                  style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'default' }}
+                  style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', cursor: 'default', flex: 1, minWidth: 0 }}
                 />
                 <button
                   type="button"
@@ -770,22 +775,22 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <a
                 href={qrUrl}
-                download={`${qrId}.png`}
+                download={`${client.name ? client.name.replace(/[^a-zA-Z0-9]/g, '_') : 'qr'}_review_standee.png`}
                 className="btn btn-primary"
                 id="btn-profile-download-qr"
-                style={{ width: '100%', justifyContent: 'center', height: '40px', fontWeight: 700 }}
+                style={{ width: '100%', justifyContent: 'center', height: '42px', fontWeight: 700, fontSize: '0.88rem' }}
               >
                 <Download size={16} />
                 <span>Download Standee QR (PNG)</span>
               </a>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+              <div className="profile-action-buttons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
                   onClick={() => setPrintModalOpen(true)}
                   id="btn-profile-print-standee"
-                  style={{ justifyContent: 'center', height: '38px', fontSize: '0.84rem' }}
+                  style={{ justifyContent: 'center', height: '40px', fontSize: '0.82rem', padding: '0 8px' }}
                 >
                   <Printer size={16} />
                   <span>Print Table Standee</span>
@@ -796,7 +801,7 @@ export default function ClientProfile({ user, onTestReview, selectedClientId, on
                   className="btn btn-secondary"
                   onClick={() => onTestReview(clientSlug)}
                   id="btn-profile-test-form"
-                  style={{ justifyContent: 'center', height: '38px', fontSize: '0.84rem' }}
+                  style={{ justifyContent: 'center', height: '40px', fontSize: '0.82rem', padding: '0 8px' }}
                 >
                   <ExternalLink size={16} />
                   <span>Preview Review Screen</span>

@@ -21,7 +21,7 @@ import config from '../../config';
 import { TableShimmer } from '../../components/Shimmer';
 import CopyablePhone from '../../components/CopyablePhone';
 
-export default function CustomerData({ user, onTestReview, selectedClientId, onSelectClient }) {
+export default function CustomerData({ user, onTestReview, selectedClientId, onSelectClient, hideClientSelector = false }) {
   const isSuperAdmin = user?.role === 'superadmin';
   const [reviews, setReviews] = useState([]);
   const [clients, setClients] = useState([]);
@@ -192,7 +192,7 @@ export default function CustomerData({ user, onTestReview, selectedClientId, onS
         }}>
           {/* Left: Client selector (for Super Admin), Search input, count */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: 1 }}>
-            {isSuperAdmin && (
+            {isSuperAdmin && !hideClientSelector && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '220px' }}>
                 <Building2 size={16} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                 <select

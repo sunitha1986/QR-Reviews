@@ -54,11 +54,44 @@ function buildGoogleReviewUrl(placeId, fallbackSearchQuery = '') {
   return '';
 }
 
+/**
+ * Verified Place Knowledge Registry
+ */
+const KNOWN_PLACES = {
+  'ChIJca8rOThDOToRu9ZACvsXYzw': {
+    name: "Varsha's Kitchen",
+    address: "Shop No. 6 1st Floor, ASN city centre, Opposite Hotel Sarovar, Dwaraka Nagar, Visakhapatnam, Andhra Pradesh 530016",
+    city: "Dwaraka Nagar, Visakhapatnam",
+    phone: "8332023333"
+  }
+};
+
+function getKnownPlaceDetails(input) {
+  if (!input || typeof input !== 'string') return null;
+  const cleanId = extractPlaceId(input) || input.trim();
+  if (!cleanId) return null;
+
+  for (const [id, details] of Object.entries(KNOWN_PLACES)) {
+    if (id.toLowerCase() === cleanId.toLowerCase()) {
+      return {
+        placeId: id,
+        ...details,
+        found: true
+      };
+    }
+  }
+  return null;
+}
+
 export {
   extractPlaceId,
-  buildGoogleReviewUrl
+  buildGoogleReviewUrl,
+  KNOWN_PLACES,
+  getKnownPlaceDetails
 };
 export default {
   extractPlaceId,
-  buildGoogleReviewUrl
+  buildGoogleReviewUrl,
+  KNOWN_PLACES,
+  getKnownPlaceDetails
 };

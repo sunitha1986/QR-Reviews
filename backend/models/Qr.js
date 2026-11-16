@@ -11,8 +11,8 @@ class QrModel {
   static formatRow(row) {
     if (!row) return null;
     const assignedClientId = row.client_id || row.assignedClientId;
-    const assignedClientName = row.client_name || row.assignedClientName;
-    const assignedClientPhone = row.client_phone || row.assignedClientPhone;
+    const assignedClientName = row.client_name || row.assignedClientName || '';
+    const assignedClientPhone = row.client_phone || row.assignedClientPhone || '';
 
     return {
       id: row.id,
@@ -27,8 +27,8 @@ class QrModel {
       createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
       assignedClient: assignedClientId ? {
         id: assignedClientId,
-        name: assignedClientName,
-        slug: generateSlug(assignedClientName),
+        name: assignedClientName || 'Assigned Business',
+        slug: generateSlug(assignedClientName || ''),
         phone: assignedClientPhone
       } : null
     };
@@ -47,7 +47,7 @@ class QrModel {
       LEFT JOIN clients c ON (q.assignedClientId = c.id OR UPPER(q.qrId) = UPPER(c.qrId))
       ORDER BY q.createdAt DESC, q.sequence DESC
     `);
-    return rows.map(this.formatRow);
+    return Array.isArray(rows) ? rows.map(r => QrModel.formatRow(r)).filter(Boolean) : [];
   }
 
   /**
@@ -64,7 +64,7 @@ class QrModel {
       WHERE q.status = 'unassigned' AND c.id IS NULL
       ORDER BY q.sequence ASC
     `);
-    return rows.map(this.formatRow);
+    return Array.isArray(rows) ? rows.map(r => QrModel.formatRow(r)).filter(Boolean) : [];
   }
 
   /**
@@ -193,20 +193,22 @@ class QrModel {
 
     try {
       const [allRows] = await pool.query('SELECT qrId, sequence FROM qrs');
-      for (const r of allRows) {
-        if (r.sequence && Number(r.sequence) > maxSeq) {
-          maxSeq = Number(r.sequence);
-        }
-        if (r.qrId) {
-          const directMatch = r.qrId.match(/^QR-?(\d+)$/i);
-          if (directMatch) {
-            const num = parseInt(directMatch[1], 10);
-            if (!isNaN(num) && num > maxSeq) maxSeq = num;
+      if (Array.isArray(allRows)) {
+        for (const r of allRows) {
+          if (r && r.sequence && Number(r.sequence) > maxSeq) {
+            maxSeq = Number(r.sequence);
           }
-          const legacyMatch = r.qrId.match(/^QR-[a-z0-9]+-(\d+)$/i);
-          if (legacyMatch) {
-            const num = parseInt(legacyMatch[1], 10);
-            if (!isNaN(num) && num > maxSeq) maxSeq = num;
+          if (r && r.qrId) {
+            const directMatch = String(r.qrId).match(/^QR-?(\d+)$/i);
+            if (directMatch) {
+              const num = parseInt(directMatch[1], 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+            const legacyMatch = String(r.qrId).match(/^QR-[a-z0-9]+-(\d+)$/i);
+            if (legacyMatch) {
+              const num = parseInt(legacyMatch[1], 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
           }
         }
       }
@@ -215,6 +217,65 @@ class QrModel {
     }
 
     return maxSeq + 1;
+  }
+
+  /**
+   * Delete all QR codes, unlink clients, and reset sequence
+   */
+  static async deleteAll() {
+    const [rows] = await pool.query('SELECT * FROM qrs');
+
+    // Unlink clients so they no longer reference deleted QRs
+    try {
+      await pool.query("UPDATE clients SET qrId = ''");
+    } catch (e) {
+      console.warn('[Qr.deleteAll] Could not unlink clients:', e.message);
+    }
+
+    // Delete scans
+    try {
+      await pool.query('DELETE FROM scans');
+    } catch (e) {
+      // ignore
+    }
+
+    // Delete all qrs
+    await pool.query('DELETE FROM qrs');
+
+    return {
+      deletedCount: Array.isArray(rows) ? rows.length : 0,
+      qrs: Array.isArray(rows) ? rows : []
+    };
+  }
+
+  /**
+   * Delete a single QR by QR ID
+   */
+  static async deleteByQrId(qrId) {
+    if (!qrId) return null;
+    const clean = qrId.trim();
+    const qr = await this.findByQrId(clean);
+    if (!qr) return null;
+
+    // Unlink any client assigned to this QR
+    try {
+      await pool.execute(
+        "UPDATE clients SET qrId = '' WHERE UPPER(qrId) = UPPER(?)",
+        [clean]
+      );
+    } catch (e) {
+      console.warn('[Qr.deleteByQrId] Could not unlink client:', e.message);
+    }
+
+    // Delete scans for this qrId
+    try {
+      await pool.execute('DELETE FROM scans WHERE UPPER(qrId) = UPPER(?)', [clean]);
+    } catch (e) {}
+
+    // Delete from qrs table
+    await pool.execute('DELETE FROM qrs WHERE UPPER(qrId) = UPPER(?)', [clean]);
+
+    return qr;
   }
 }
 

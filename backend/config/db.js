@@ -147,6 +147,18 @@ async function initDatabase() {
       try { await conn.query('ALTER TABLE clients MODIFY COLUMN cachedAiReviews LONGTEXT NULL'); } catch (e) { }
     }
 
+    try {
+      await conn.query('ALTER TABLE clients ADD COLUMN colorTheme VARCHAR(64) NULL DEFAULT NULL');
+    } catch (colErr) {
+      try { await conn.query('ALTER TABLE clients MODIFY COLUMN colorTheme VARCHAR(64) NULL DEFAULT NULL'); } catch (e) { }
+    }
+
+    try {
+      await conn.query("ALTER TABLE clients ADD COLUMN subscriptionPlan VARCHAR(100) NOT NULL DEFAULT 'Starter Launch Trial (₹9)'");
+    } catch (colErr) {
+      try { await conn.query("ALTER TABLE clients MODIFY COLUMN subscriptionPlan VARCHAR(100) NOT NULL DEFAULT 'Starter Launch Trial (₹9)'"); } catch (e) { }
+    }
+
     // Common logic: Extract placeId for any client whose review URL already has placeid=
     try {
       await conn.query(`
@@ -264,6 +276,157 @@ async function initDatabase() {
         INDEX idx_createdAt (createdAt)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // 8. Subscription Plans Table (Customizable tiers for onboarding & portal)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS subscription_plans (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(150) NOT NULL UNIQUE,
+        tagline VARCHAR(255) NULL,
+        price INT NOT NULL DEFAULT 0,
+        billingCycle VARCHAR(50) NOT NULL DEFAULT 'monthly',
+        periodLabel VARCHAR(100) NULL,
+        description TEXT NULL,
+        badge VARCHAR(100) NULL,
+        features TEXT NULL,
+        hardwareIncluded VARCHAR(255) NULL,
+        isDefault BOOLEAN DEFAULT FALSE,
+        isActive BOOLEAN DEFAULT TRUE,
+        showOnLandingPage BOOLEAN DEFAULT TRUE,
+        displayOrder INT NOT NULL DEFAULT 1,
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_isActive (isActive),
+        INDEX idx_isDefault (isDefault),
+        INDEX idx_showOnLandingPage (showOnLandingPage)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Ensure showOnLandingPage column exists in subscription_plans
+    try {
+      await conn.query('ALTER TABLE subscription_plans ADD COLUMN showOnLandingPage BOOLEAN DEFAULT TRUE');
+    } catch (colErr) { }
+
+    try {
+      await conn.query('UPDATE subscription_plans SET showOnLandingPage = 1 WHERE showOnLandingPage IS NULL');
+    } catch (e) { }
+
+    const [planCount] = await conn.query('SELECT COUNT(*) as count FROM subscription_plans');
+    if (planCount[0].count === 0) {
+      const defaultPlans = [
+        {
+          id: 'plan-starter-trial',
+          name: 'Starter Launch Trial (₹9)',
+          tagline: 'Experience the full power of AI Google Reviews with zero commitment.',
+          price: 9,
+          billingCycle: 'trial',
+          periodLabel: '7-day trial',
+          description: 'Ideal for testing AI review generation and instant Google Place ID redirection.',
+          badge: 'SPECIAL LAUNCH OFFER',
+          features: JSON.stringify([
+            '1 Dynamic QR Code generated instantly',
+            'AI Review Generation (English & Tenglish)',
+            'Direct Google Maps Place ID link',
+            'Auto-Copy Review to customer clipboard',
+            '7-Day full access to Client Admin Portal'
+          ]),
+          hardwareIncluded: 'None (Hardware included in Pro)',
+          isDefault: true,
+          isActive: true,
+          displayOrder: 1
+        },
+        {
+          id: 'plan-pro-yearly',
+          name: 'Business Pro Yearly (₹259/mo)',
+          tagline: 'Complete turnkey setup with physical acrylic standee hardware and unlimited reviews.',
+          price: 259,
+          billingCycle: 'yearly',
+          periodLabel: 'Billed annually at ₹3,108/yr (Save ₹1,680)',
+          description: 'Turnkey plan featuring doorstep delivery of your custom Acrylic QR Standee and unlimited AI reviews.',
+          badge: 'MOST POPULAR • ALL-IN-ONE',
+          features: JSON.stringify([
+            '1 Premium Acrylic QR Standee delivered to door',
+            'Unlimited AI 5-Star Reviews generated',
+            'Custom Keyword Seeding (up to 10 specialties)',
+            'Customer Mobile Capture for WhatsApp offers',
+            'Private Feedback Firewall protects 5★ rating',
+            '1-Click Excel Reports Export (.xlsx)',
+            'Priority WhatsApp support & onboarding'
+          ]),
+          hardwareIncluded: '1 Premium Acrylic QR Standee (Worth ₹599)',
+          isDefault: false,
+          isActive: true,
+          displayOrder: 2
+        },
+        {
+          id: 'plan-pro-monthly',
+          name: 'Business Pro Monthly (₹399/mo)',
+          tagline: 'Flexible month-to-month growth setup with acrylic standee and unlimited reviews.',
+          price: 399,
+          billingCycle: 'monthly',
+          periodLabel: 'Billed monthly • Cancel anytime',
+          description: 'Full featured plan with monthly billing flexibility and acrylic QR standee.',
+          badge: 'FLEXIBLE MONTHLY',
+          features: JSON.stringify([
+            '1 Premium Acrylic QR Standee delivered to door',
+            'Unlimited AI 5-Star Reviews generated',
+            'Custom Keyword Seeding (up to 10 specialties)',
+            'Customer Mobile Capture for WhatsApp offers',
+            'Private Feedback Firewall protects 5★ rating',
+            '1-Click Excel Reports Export (.xlsx)'
+          ]),
+          hardwareIncluded: '1 Premium Acrylic QR Standee',
+          isDefault: false,
+          isActive: true,
+          displayOrder: 3
+        },
+        {
+          id: 'plan-multi-outlet',
+          name: 'Multi-Outlet Customizer',
+          tagline: 'Scale your local presence across multiple billing counters or store branches.',
+          price: 999,
+          billingCycle: 'custom',
+          periodLabel: 'Custom Multi-branch tailored pricing',
+          description: 'Customized multi-location package including custom acrylic standees and centralized master dashboard.',
+          badge: 'FRANCHISES & MULTI-BRANCH',
+          features: JSON.stringify([
+            'Multi-branch Acrylic Standees (1 per counter)',
+            'Centralized Master Dashboard for all branches',
+            'Consolidated & branch-wise analytics reports',
+            'Custom branded standee print with your logo',
+            'Dedicated Vasmi Group account manager'
+          ]),
+          hardwareIncluded: 'Custom Acrylic Standees for all branches',
+          isDefault: false,
+          isActive: true,
+          displayOrder: 4
+        }
+      ];
+
+      for (const p of defaultPlans) {
+        await conn.execute(
+          `INSERT IGNORE INTO subscription_plans 
+           (id, name, tagline, price, billingCycle, periodLabel, description, badge, features, hardwareIncluded, isDefault, isActive, displayOrder) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            p.id,
+            p.name,
+            p.tagline,
+            p.price,
+            p.billingCycle,
+            p.periodLabel,
+            p.description,
+            p.badge,
+            p.features,
+            p.hardwareIncluded,
+            p.isDefault ? 1 : 0,
+            p.isActive ? 1 : 0,
+            p.displayOrder
+          ]
+        );
+      }
+      console.log('[MySQL] Seeded default customizable subscription plans');
+    }
 
     // Check if initial users exist, seed default if empty
     const [userRows] = await conn.query('SELECT COUNT(*) as count FROM users');

@@ -185,7 +185,18 @@ class ReviewController {
       const stats = await Stat.getSystemStats();
       res.json(stats);
     } catch (err) {
-      res.status(500).json({ error: 'Failed to fetch stats: ' + err.message });
+      console.error('Error fetching system stats:', err.message);
+      // Return safe fallback stats rather than hard 500 error that breaks frontend
+      res.json({
+        totalQrs: 0,
+        unassignedQrs: 0,
+        assignedQrs: 0,
+        totalClients: 0,
+        totalReviews: 0,
+        totalScans: 0,
+        fallback: true,
+        error: err.message
+      });
     }
   }
 }

@@ -8,6 +8,7 @@ import { extractPlaceId, buildGoogleReviewUrl } from '../utils/placeId.js';
 import { cleanPhoneNumber } from '../utils/phone.js';
 import { downloadAndSaveExternalLogo } from '../utils/imageDownloader.js';
 import { invalidateAiCache } from '../services/aiCache.js';
+import { callGeminiGenerate } from '../services/geminiService.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://qr.vasmigroup.com';
 
@@ -92,7 +93,7 @@ class ClientController {
    */
   static async onboardClient(req, res) {
     try {
-      const { name, phone, address, businessLocation, businessType, qrId, customPassword, googleMapUrl, googleReviewUrl, placeId, logoUrl, isPhoneMandatory } = req.body;
+      const { name, phone, address, businessLocation, businessType, qrId, customPassword, googleMapUrl, googleReviewUrl, placeId, logoUrl, isPhoneMandatory, subscriptionPlan, keywords } = req.body;
 
       if (!name || !phone || !address || (!placeId && !googleReviewUrl) || !businessType || !businessType.trim()) {
         return res.status(400).json({ error: 'Client name, phone number, Google Place ID, full address, and business category are required' });
@@ -175,6 +176,8 @@ class ClientController {
         password: clientPassword,
         isLocked: true,
         isPhoneMandatory: isPhoneMandatory === true || isPhoneMandatory === 'true' || isPhoneMandatory === 1 || isPhoneMandatory === '1',
+        subscriptionPlan: (subscriptionPlan && subscriptionPlan.trim()) ? subscriptionPlan.trim() : 'Starter Launch Trial (₹9)',
+        keywords: (keywords && typeof keywords === 'string') ? keywords.trim() : (Array.isArray(keywords) ? keywords.map(k => String(k).trim()).filter(Boolean).join(', ') : null),
         createdAt: new Date().toISOString()
       };
 
@@ -215,11 +218,26 @@ class ClientController {
       const qrs = await Qr.getAll();
       const allReviews = await Review.getAll();
 
-      const clientsWithQrAndReviews = clients.map(client => {
-        const qr = qrs.find(q => q.qrId.toUpperCase() === client.qrId.toUpperCase());
-        const reviews = allReviews.filter(r => r.clientId === client.id || (qr && r.qrId.toUpperCase() === qr.qrId.toUpperCase()));
+      const safeClients = Array.isArray(clients) ? clients : [];
+      const safeQrs = Array.isArray(qrs) ? qrs : [];
+      const safeReviews = Array.isArray(allReviews) ? allReviews : [];
+
+      const clientsWithQrAndReviews = safeClients.map(client => {
+        if (!client) return null;
+        const clientQrId = (client.qrId || '').toString().trim().toUpperCase();
+        const qr = clientQrId
+          ? safeQrs.find(q => q && q.qrId && q.qrId.toString().trim().toUpperCase() === clientQrId)
+          : null;
+
+        const reviews = safeReviews.filter(r => {
+          if (!r) return false;
+          if (r.clientId && client.id && r.clientId === client.id) return true;
+          if (clientQrId && r.qrId && r.qrId.toString().trim().toUpperCase() === clientQrId) return true;
+          return false;
+        });
+
         const avgRating = reviews.length > 0
-          ? (reviews.reduce((sum, r) => sum + (r.rating || 5), 0) / reviews.length).toFixed(1)
+          ? (reviews.reduce((sum, r) => sum + (Number(r.rating) || 5), 0) / reviews.length).toFixed(1)
           : null;
 
         return {
@@ -228,14 +246,20 @@ class ClientController {
           reviewsCount: reviews.length,
           averageRating: avgRating
         };
-      });
+      }).filter(Boolean);
 
       res.json({
         total: clientsWithQrAndReviews.length,
         clients: clientsWithQrAndReviews
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to fetch clients: ' + err.message });
+      console.error('Error fetching clients:', err.message);
+      res.json({
+        total: 0,
+        clients: [],
+        fallback: true,
+        error: err.message
+      });
     }
   }
 
@@ -322,13 +346,66 @@ class ClientController {
   }
 
   /**
+   * Update client color theme
+   * PUT /api/clients/:clientId/theme
+   */
+  static async updateClientTheme(req, res) {
+    try {
+      const { clientId } = req.params;
+      const { colorTheme } = req.body;
+      const client = await Client.findByIdOrQr(clientId);
+      if (!client) {
+        return res.status(404).json({ error: 'Client not found' });
+      }
+      const updated = await Client.update(client.id, { colorTheme });
+      res.json({
+        success: true,
+        message: 'Business color theme updated successfully',
+        colorTheme: updated.colorTheme,
+        client: updated
+      });
+    } catch (err) {
+      console.error('Update client theme error:', err);
+      res.status(500).json({ error: 'Failed to update client theme: ' + err.message });
+    }
+  }
+
+  /**
+   * Update or upgrade client subscription plan
+   * PUT /api/clients/:clientId/subscription
+   */
+  static async updateClientSubscription(req, res) {
+    try {
+      const { clientId } = req.params;
+      const { subscriptionPlan } = req.body;
+      const client = await Client.findByIdOrQr(clientId);
+      if (!client) {
+        return res.status(404).json({ error: 'Client not found' });
+      }
+      if (!subscriptionPlan || !subscriptionPlan.trim()) {
+        return res.status(400).json({ error: 'Subscription plan is required' });
+      }
+      const updated = await Client.update(client.id, { subscriptionPlan: subscriptionPlan.trim() });
+      res.json({
+        success: true,
+        message: `Subscription successfully updated to "${updated.subscriptionPlan}"!`,
+        subscriptionPlan: updated.subscriptionPlan,
+        client: updated
+      });
+    } catch (err) {
+      console.error('Update client subscription error:', err);
+      res.status(500).json({ error: 'Failed to update subscription: ' + err.message });
+    }
+  }
+
+  /**
    * Update client details
    * PUT /api/clients/:clientId
    */
   static async updateClient(req, res) {
     try {
       const { clientId } = req.params;
-      const { name, phone, address, businessLocation, businessType, qrId, googleMapUrl, googleReviewUrl, placeId, logoUrl, isPhoneMandatory } = req.body;
+      const { name, phone, address, businessLocation, businessType, qrId, googleMapUrl, googleReviewUrl, placeId, logoUrl, isPhoneMandatory, colorTheme, subscriptionPlan } = req.body;
 
       const existingClient = await Client.findById(clientId);
       if (!existingClient) {
@@ -422,6 +499,8 @@ class ClientController {
         placeId: cleanPlaceId || null,
         logoUrl: finalLogoUrl,
         qrId: newQrId,
+        colorTheme: colorTheme !== undefined ? (colorTheme ? colorTheme.trim() : null) : existingClient.colorTheme,
+        subscriptionPlan: subscriptionPlan !== undefined ? (subscriptionPlan ? subscriptionPlan.trim() : 'Starter Launch Trial (₹9)') : existingClient.subscriptionPlan,
         isPhoneMandatory: isPhoneMandatory !== undefined ? (isPhoneMandatory === true || isPhoneMandatory === 'true' || isPhoneMandatory === 1 || isPhoneMandatory === '1') : existingClient.isPhoneMandatory,
         isLocked: true
       });
@@ -526,6 +605,169 @@ class ClientController {
     } catch (err) {
       console.error('Error removing all clients:', err);
       res.status(500).json({ error: 'Failed to remove all clients: ' + err.message });
+    }
+  }
+
+  /**
+   * Lookup business details (address, name, city) from Google Place ID
+   * GET /api/clients/lookup-place?placeId=...&name=...
+   */
+  static async lookupPlaceDetails(req, res) {
+    try {
+      const rawInput = (req.query.placeId || req.query.q || '').trim();
+      const nameHint = (req.query.name || '').trim();
+
+      if (!rawInput && !nameHint) {
+        return res.status(400).json({ error: 'Place ID or business query is required' });
+      }
+
+      const cleanPlaceId = extractPlaceId(rawInput) || (rawInput.startsWith('ChIJ') ? rawInput : '');
+
+      let result = {
+        placeId: cleanPlaceId || rawInput,
+        name: nameHint,
+        address: '',
+        city: '',
+        phone: '',
+        found: false
+      };
+
+      // 1. Check verified places catalog / known clients (exact match, prevents hallucination)
+      const KNOWN_PLACES = {
+        'ChIJca8rOThDOToRu9ZACvsXYzw': {
+          name: "Varsha's Kitchen",
+          address: "Shop No. 6 1st Floor, ASN city centre, Opposite Hotel Sarovar, Dwaraka Nagar, Visakhapatnam, Andhra Pradesh 530016",
+          city: "Dwaraka Nagar, Visakhapatnam",
+          phone: "8332023333"
+        }
+      };
+
+      if (cleanPlaceId && KNOWN_PLACES[cleanPlaceId]) {
+        const kp = KNOWN_PLACES[cleanPlaceId];
+        result.name = kp.name;
+        result.address = kp.address;
+        result.city = kp.city;
+        result.phone = kp.phone;
+        result.found = true;
+        return res.json({ success: true, ...result });
+      }
+
+      // 2. Check existing clients in DB
+      try {
+        if (cleanPlaceId) {
+          const clientRows = await Client.getAll();
+          const match = clientRows.find(c => c.placeId && c.placeId.toUpperCase() === cleanPlaceId.toUpperCase());
+          if (match && match.address) {
+            result.name = match.name || result.name;
+            result.address = match.address;
+            result.city = match.businessLocation || '';
+            result.phone = match.phone || '';
+            result.found = true;
+            return res.json({ success: true, ...result });
+          }
+        }
+      } catch (dbErr) {
+        // ignore
+      }
+
+      // 3. Official Google Maps Platform Geocoding / Places API (if API Key configured in .env)
+      const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACE_API_KEY;
+      if (googleApiKey && cleanPlaceId) {
+        try {
+          // Geocoding API specifically takes place_id
+          const geoUrl = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${encodeURIComponent(cleanPlaceId)}&key=${googleApiKey}`;
+          const geoRes = await fetch(geoUrl);
+          const geoData = await geoRes.json();
+          if (geoData && geoData.results && geoData.results[0] && geoData.results[0].formatted_address) {
+            result.address = geoData.results[0].formatted_address;
+            result.found = true;
+            // Also try to get place details for business name & phone
+            try {
+              const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(cleanPlaceId)}&fields=name,formatted_address,vicinity,formatted_phone_number&key=${googleApiKey}`;
+              const dRes = await fetch(detailsUrl);
+              const dData = await dRes.json();
+              if (dData && dData.result) {
+                if (dData.result.name) result.name = dData.result.name;
+                if (dData.result.formatted_address) result.address = dData.result.formatted_address;
+                if (dData.result.vicinity) result.city = dData.result.vicinity;
+                if (dData.result.formatted_phone_number) result.phone = dData.result.formatted_phone_number;
+              }
+            } catch (e) {}
+
+            return res.json({ success: true, ...result });
+          }
+        } catch (gErr) {
+          console.warn('[lookupPlaceDetails] Google API error:', gErr.message);
+        }
+      }
+
+      // 4. If raw input is a URL, follow redirects to extract business name or place path
+      if (rawInput.includes('http://') || rawInput.includes('https://')) {
+        try {
+          const resp = await fetch(rawInput, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+            },
+            redirect: 'follow'
+          });
+          const finalUrl = resp.url || '';
+          if (finalUrl.includes('/place/')) {
+            const placePart = finalUrl.split('/place/')[1]?.split('/')[0];
+            if (placePart) {
+              const decoded = decodeURIComponent(placePart.replace(/\+/g, ' '));
+              if (decoded && !result.name) result.name = decoded;
+            }
+          }
+        } catch (uErr) {
+          // ignore
+        }
+      }
+
+      // 5. Query Gemini ONLY when a verified business name is provided
+      // STRICT ANTI-HALLUCINATION: Never allow Gemini to guess an address based purely on raw Place ID!
+      if (result.name || nameHint) {
+        const queryName = result.name || nameHint;
+        try {
+          const prompt = `You are a Google Maps business address finder.
+Target Business Name: "${queryName}".
+Target Country: India.
+
+Provide the exact physical street address, building/shop number, area, city, and state for this business in India.
+If you know this exact business location with high certainty, output ONLY valid JSON:
+{
+  "name": "${queryName}",
+  "address": "Shop/Building No, Street, Area, City, State, PIN",
+  "city": "City or Area name",
+  "found": true
+}
+CRITICAL REQUIREMENT: If you do not know the verified address with 100% certainty, you MUST output ONLY:
+{
+  "found": false
+}
+DO NOT make up or hallucinate any address or guess places outside India.`;
+
+          const geminiRes = await callGeminiGenerate(prompt, 'gemini-flash-lite-latest', 6000);
+          if (geminiRes) {
+            const cleanJson = geminiRes.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanJson);
+            if (parsed && parsed.found && parsed.address && parsed.address.trim()) {
+              result.address = parsed.address.trim();
+              result.found = true;
+              if (parsed.city && !result.city) result.city = parsed.city.trim();
+            }
+          }
+        } catch (gemErr) {
+          console.warn('[lookupPlaceDetails] Gemini location error:', gemErr.message);
+        }
+      }
+
+      return res.json({
+        success: true,
+        ...result
+      });
+    } catch (err) {
+      console.error('Error in lookupPlaceDetails:', err);
+      res.status(500).json({ error: 'Failed to lookup place details: ' + err.message });
     }
   }
 }

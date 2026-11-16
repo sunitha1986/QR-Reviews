@@ -27,6 +27,8 @@ class ClientModel {
       username: row.username,
       password: row.password,
       keywords: row.keywords || '',
+      colorTheme: row.colorTheme || null,
+      subscriptionPlan: row.subscriptionPlan || 'Starter Launch Trial (₹9)',
       isLocked: Boolean(row.isLocked),
       isPhoneMandatory: Boolean(row.isPhoneMandatory),
       createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
@@ -113,8 +115,8 @@ class ClientModel {
    */
   static async insert(client) {
     await pool.execute(
-      `INSERT INTO clients (id, name, phone, address, businessLocation, businessType, googleMapUrl, googleReviewUrl, logoUrl, qrId, username, password, isLocked, isPhoneMandatory, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO clients (id, name, phone, address, businessLocation, businessType, googleMapUrl, googleReviewUrl, logoUrl, qrId, username, password, isLocked, isPhoneMandatory, subscriptionPlan, keywords, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         client.id,
         client.name.trim(),
@@ -130,6 +132,8 @@ class ClientModel {
         client.password || 'admin@123',
         client.isLocked ? 1 : 0,
         client.isPhoneMandatory ? 1 : 0,
+        client.subscriptionPlan ? client.subscriptionPlan.trim() : 'Starter Launch Trial (₹9)',
+        client.keywords ? client.keywords.trim() : null,
         new Date(client.createdAt || Date.now())
       ]
     );
@@ -194,6 +198,14 @@ class ClientModel {
     if (fields.keywords !== undefined) {
       updates.push('keywords = ?');
       values.push(fields.keywords ? fields.keywords.trim() : null);
+    }
+    if (fields.colorTheme !== undefined) {
+      updates.push('colorTheme = ?');
+      values.push(fields.colorTheme ? fields.colorTheme.trim() : null);
+    }
+    if (fields.subscriptionPlan !== undefined) {
+      updates.push('subscriptionPlan = ?');
+      values.push(fields.subscriptionPlan ? fields.subscriptionPlan.trim() : 'Starter Launch Trial (₹9)');
     }
 
     updates.push('updatedAt = CURRENT_TIMESTAMP');

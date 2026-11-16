@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   QrCode,
   ScanLine,
@@ -35,10 +35,17 @@ import {
   AlertCircle,
   ThumbsUp,
   Flame,
-  Globe
+  Globe,
+  Tag,
+  Gift,
+  Sliders,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle
 } from 'lucide-react';
 import sidebarLogo from '../assets/sidebar_logo.png';
 import vasmiIcon from '../assets/vasmi_icon.png';
+import vasmiFullLogo from '../assets/vasmi_full_logo.png';
 import loginWaveBg from '../assets/login_wave_bg.jpg';
 import CopyablePhone from '../components/CopyablePhone';
 import config, { getImageUrl } from '../config';
@@ -46,9 +53,24 @@ import config, { getImageUrl } from '../config';
 export default function LandingPage({
   onOpenLogin,
   onOpenCustomerReview,
+  onOpenQuickScanner,
   theme = 'light',
   onToggleTheme
 }) {
+  // ---------------------------------------------------------------------------
+  // 0. SCROLL STATE FOR TRANSPARENT TOP NAVBAR
+  // ---------------------------------------------------------------------------
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // ---------------------------------------------------------------------------
   // 1. CAROUSEL STATE (6 STEPS OF THE QR PROCESS)
   // ---------------------------------------------------------------------------
@@ -151,21 +173,27 @@ export default function LandingPage({
     totalScans: 15
   });
   const [clients, setClients] = useState([]);
+  const [plans, setPlans] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, clientsRes] = await Promise.all([
+        const [statsRes, clientsRes, plansRes] = await Promise.all([
           fetch(`${config.API_BASE_URL}/api/stats`),
-          fetch(`${config.API_BASE_URL}/api/clients`)
+          fetch(`${config.API_BASE_URL}/api/clients`),
+          fetch(`${config.API_BASE_URL}/api/subscription-plans?landingOnly=true`)
         ]);
         const statsData = await statsRes.json();
         const clientsData = await clientsRes.json();
+        const plansData = await plansRes.json();
 
         if (statsData) setStats(statsData);
         if (clientsData && Array.isArray(clientsData.clients)) {
           setClients(clientsData.clients);
+        }
+        if (plansData && Array.isArray(plansData.plans) && plansData.plans.length > 0) {
+          setPlans(plansData.plans);
         }
       } catch (err) {
         console.warn('Landing page data fetch notice:', err);
@@ -235,10 +263,99 @@ export default function LandingPage({
     email: '',
     location: '',
     businessCategory: 'Restaurant & Cafe',
+    selectedPlan: '',
     message: ''
   });
   const [submittingEnquiry, setSubmittingEnquiry] = useState(false);
   const [enquiryFeedback, setEnquiryFeedback] = useState(null);
+
+  // ---------------------------------------------------------------------------
+  // 4. PRICING SECTION STATE & DYNAMIC CALCULATOR
+  // ---------------------------------------------------------------------------
+  const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
+  const [customOutlets, setCustomOutlets] = useState(3); // 2 to 10 outlets
+  const [customKeywords, setCustomKeywords] = useState(10); // 5 to 30 keywords
+
+  // Synced landing plans from Database (Super Admin Configured - Max 3)
+  const landingPlans = useMemo(() => {
+    if (!Array.isArray(plans) || plans.length === 0) return [];
+    const featured = plans.filter(p => p.showOnLandingPage);
+    return (featured.length > 0 ? featured : plans).slice(0, 3);
+  }, [plans]);
+
+  const card1 = landingPlans[0] || null;
+  const card2 = landingPlans[1] || null;
+  const card3 = landingPlans[2] || null;
+
+  const calculateCustomPrice = () => {
+    const base = (card3 && card3.price > 0) ? Number(card3.price) : 999;
+    const extraOutletsCost = (customOutlets - 2) * 199;
+    const extraKeywordsCost = Math.max(0, customKeywords - 5) * 25;
+    return base + extraOutletsCost + extraKeywordsCost;
+  };
+
+  const handleSelectPlan = (planName) => {
+    setEnquiryForm((prev) => ({
+      ...prev,
+      selectedPlan: planName,
+      message: `Hi, I am interested in getting started with the "${planName}". Please contact me with onboarding steps.`
+    }));
+    scrollToSection('enquiry');
+  };
+
+  // ---------------------------------------------------------------------------
+  // 5. FREQUENTLY ASKED QUESTIONS (CUSTOMER PERSPECTIVE)
+  // ---------------------------------------------------------------------------
+  const [openFaq, setOpenFaq] = useState(0); // Open first question by default
+
+  const toggleFaq = (idx) => {
+    setOpenFaq(prev => (prev === idx ? null : idx));
+  };
+
+  const CUSTOMER_FAQS = [
+    {
+      id: 1,
+      tag: "Zero App Download",
+      question: "Do I need to download an app or register an account to leave a review?",
+      answer: "No app download or account signup is required at all! Simply open your smartphone's built-in camera (iPhone or Android) and scan the QR standee. The review page opens instantly in your mobile web browser in under 1 second."
+    },
+    {
+      id: 2,
+      tag: "1-Tap Experience",
+      question: "Why do I see ready-made review options instead of a blank text box?",
+      answer: "Typing out long paragraphs on a mobile keyboard takes time and effort. Our smart review engine prepares genuine, tailored review options highlighting the best features of this business. You simply tap your favorite one—zero typing required!"
+    },
+    {
+      id: 3,
+      tag: "Direct to Google",
+      question: "How does my selected comment get posted to the official Google Business page?",
+      answer: "When you tap your chosen review comment, it is automatically copied to your phone's clipboard. You'll then be smoothly guided straight into the official Google Maps review dialogue for this business where you simply paste the comment, choose your 5-star rating, and tap Post!"
+    },
+    {
+      id: 4,
+      tag: "Bilingual Options",
+      question: "Can I choose reviews in Telugu / Tenglish phrasing?",
+      answer: "Yes, absolutely! At the top of the comment selection list, tap the 'Tenglish' tab to explore authentic conversational comments written in Telugu using English letters (e.g. 'Food super ga undi!', 'Project work chala bagundi!')."
+    },
+    {
+      id: 5,
+      tag: "Privacy & Perks",
+      question: "Is it mandatory to provide my phone number when submitting?",
+      answer: "Providing your mobile number is completely optional in most establishments! If you choose to share it, the business uses it to send you exclusive WhatsApp discount vouchers, festival rewards, and loyalty perks for your visit."
+    },
+    {
+      id: 6,
+      tag: "100% Safe",
+      question: "Is scanning this dynamic QR code safe and secure?",
+      answer: "100% safe. The QR standee only links you to the business's official Google review page. It never asks for sensitive personal credentials, never installs anything on your device, and never accesses your private files."
+    },
+    {
+      id: 7,
+      tag: "Customer Care",
+      question: "What if I had a less-than-perfect experience and want to share constructive feedback?",
+      answer: "Businesses want to hear your honest experience! You have the option to share private constructive feedback directly with store management so they can quickly resolve your concern personally and make things right."
+    }
+  ];
 
   const handleEnquiryChange = (e) => {
     const { name, value } = e.target;
@@ -354,6 +471,12 @@ export default function LandingPage({
             <button type="button" onClick={() => scrollToSection('advantages')} className="landing-nav-link">
               Advantages
             </button>
+            <button type="button" onClick={() => scrollToSection('pricing')} className="landing-nav-link">
+              Pricing
+            </button>
+            <button type="button" onClick={() => scrollToSection('faq')} className="landing-nav-link">
+              FAQ
+            </button>
             <button type="button" onClick={() => scrollToSection('enquiry')} className="landing-nav-link">
               Get Standee
             </button>
@@ -384,6 +507,21 @@ export default function LandingPage({
               </button>
             )}
 
+            {/* Quick QR Standee Scanner Button */}
+            {onOpenQuickScanner && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm landing-scan-btn"
+                onClick={onOpenQuickScanner}
+                title="Scan any physical QR standee with sound & instant navigation"
+                id="btn-landing-quick-scan"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ScanLine size={14} style={{ color: '#10B981' }} />
+                <span>Scan Standee</span>
+              </button>
+            )}
+
             {/* Client / Superadmin Login Portal Button */}
             <button
               type="button"
@@ -403,16 +541,12 @@ export default function LandingPage({
       {/* ========================================================================= */}
       <section className="landing-hero-section" id="how-it-works">
         <div className="landing-container">
-          {/* Eyebrow Pill */}
-          <div className="landing-hero-badge">
-            <Sparkles size={14} style={{ color: '#FBBF24' }} />
-            <span>Turn Customer Scans Into 5-Star Google Reviews In 10 Seconds</span>
-          </div>
+
 
           {/* Main Hero Title */}
           <h1 className="landing-hero-heading">
-            Automate Your Google Reputation With{' '}
-            <span className="text-gradient-purple">Dynamic Smart Standees</span>
+            Turn QR scans into Trusted reviews{' '}
+            <span className="text-gradient-purple">without typing</span>
           </h1>
 
           <p className="landing-hero-subtext">
@@ -537,9 +671,14 @@ export default function LandingPage({
                             <div className="mockup-qr-pill">QR000038</div>
                           </div>
                         </div>
-                        <div className="mockup-scan-instruction">
+                        <div
+                          className="mockup-scan-instruction"
+                          style={onOpenQuickScanner ? { cursor: 'pointer', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.4)' } : {}}
+                          onClick={onOpenQuickScanner}
+                          title={onOpenQuickScanner ? 'Click to open live camera scanner' : ''}
+                        >
                           <ScanLine size={16} style={{ color: '#10B981' }} />
-                          <span>Scanning Standee Camera Feed...</span>
+                          <span>{onOpenQuickScanner ? 'Tap to Open Live Camera Scanner' : 'Scanning Standee Camera Feed...'}</span>
                         </div>
                       </div>
                     )}
@@ -944,6 +1083,368 @@ export default function LandingPage({
       </section>
 
       {/* ========================================================================= */}
+      {/* 5.5. TRANSPARENT PRICING PLANS (WITH ₹9 LAUNCH TRIAL)                     */}
+      {/* ========================================================================= */}
+      <section className="landing-pricing-section" id="pricing">
+        <div className="landing-container">
+          {/* Section Header */}
+          <div className="section-header-centered">
+            <div className="section-eyebrow">
+              <Tag size={14} style={{ color: '#F59E0B' }} />
+              <span>Transparent & High-ROI Plans</span>
+            </div>
+            <h2 className="section-title">
+              Simple INR Pricing For The Best Google Review Platform
+            </h2>
+            <p className="section-subtitle">
+              {card1?.price === 0
+                ? <>Start with our <strong>{card1?.name || 'Free Trial'}</strong> or scale with flexible monthly and annual plans. Cancel anytime.</>
+                : <>Start with our <strong>{card1 ? `₹${card1.price} introductory launch trial` : 'introductory launch trial'}</strong> or scale with flexible monthly and annual plans. Cancel anytime.</>}
+            </p>
+
+            {/* Monthly / Yearly Billing Toggle */}
+            <div className="pricing-billing-toggle-wrap">
+              <div className="pricing-billing-toggle" role="radiogroup" aria-label="Billing Cycle">
+                <button
+                  type="button"
+                  className={`billing-toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
+                  onClick={() => setBillingCycle('monthly')}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  className={`billing-toggle-btn ${billingCycle === 'yearly' ? 'active' : ''}`}
+                  onClick={() => setBillingCycle('yearly')}
+                >
+                  <span>Yearly</span>
+                  <span className="billing-save-pill">Save 35% + Free Standee</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3 Pricing Cards Grid */}
+          <div className="pricing-cards-grid">
+            {/* CARD 1: STARTER / FIRST LANDING PLAN */}
+            {card1 && (
+              <div className="pricing-card glass-panel starter-card">
+                {card1.badge && (
+                  <div className="pricing-card-badge starter-badge">
+                    <Sparkles size={12} />
+                    <span>{card1.badge}</span>
+                  </div>
+                )}
+
+                <div className="pricing-card-header">
+                  <div className="pricing-plan-category">{card1.billingCycle ? card1.billingCycle.toUpperCase() : 'STARTER'}</div>
+                  <h3 className="pricing-plan-name">{card1.name}</h3>
+                  {card1.tagline && (
+                    <p className="pricing-plan-tagline">
+                      {card1.tagline}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pricing-price-box">
+                  <div className="pricing-currency-row">
+                    <span className="pricing-currency">₹</span>
+                    <span className="pricing-amount">{card1.price !== undefined ? card1.price : 0}</span>
+                  </div>
+                  <div className="pricing-period">{card1.periodLabel || (card1.price === 0 ? '7-day trial' : 'per month')}</div>
+                  <div className="pricing-note">Instant QR activation • No credit card required</div>
+                </div>
+
+                {card1.hardwareIncluded && (
+                  <div className="pricing-banner-perk" style={{ margin: '0 0 16px 0' }}>
+                    <Gift size={13} />
+                    <span>{card1.hardwareIncluded}</span>
+                  </div>
+                )}
+
+                <div className="pricing-divider" />
+
+                <div className="pricing-features-list">
+                  {Array.isArray(card1.features) && card1.features.length > 0 ? (
+                    card1.features.map((feat, idx) => (
+                      <div key={idx} className="pricing-feature-item">
+                        <Check size={16} className="feature-check-icon" />
+                        <span>{feat}</span>
+                      </div>
+                    ))
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectPlan(card1.name)}
+                  className="btn btn-secondary pricing-cta-btn"
+                  id="btn-pricing-starter"
+                >
+                  <span>{card1.price === 0 ? 'Start Free Trial' : `Get Started for ₹${card1.price}`}</span>
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            )}
+
+            {/* CARD 2: PRO / SECOND LANDING PLAN (FEATURED) */}
+            {card2 && (
+              <div className="pricing-card glass-panel pro-card featured-card">
+                {card2.badge && (
+                  <div className="pricing-card-badge pro-badge">
+                    <Flame size={13} fill="#FFF" />
+                    <span>{card2.badge}</span>
+                  </div>
+                )}
+
+                <div className="pricing-card-header">
+                  <div className="pricing-plan-category" style={{ color: '#A855F7' }}>GROWTH & LOCAL SEO</div>
+                  <h3 className="pricing-plan-name">{card2.name}</h3>
+                  {card2.tagline && (
+                    <p className="pricing-plan-tagline">
+                      {card2.tagline}
+                    </p>
+                  )}
+                </div>
+
+                <div className="pricing-price-box">
+                  <div className="pricing-currency-row">
+                    <span className="pricing-currency">₹</span>
+                    <span className="pricing-amount">
+                      {card2.price !== undefined ? card2.price : 150}
+                    </span>
+                    <span className="pricing-unit">/month</span>
+                  </div>
+                  <div className="pricing-period">
+                    {card2.periodLabel || 'Billed monthly • Cancel anytime'}
+                  </div>
+                  {card2.hardwareIncluded && (
+                    <div className="pricing-banner-perk">
+                      <Gift size={13} />
+                      <span>{card2.hardwareIncluded}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pricing-divider" />
+
+                <div className="pricing-features-list">
+                  {Array.isArray(card2.features) && card2.features.length > 0 ? (
+                    card2.features.map((feat, idx) => (
+                      <div key={idx} className={`pricing-feature-item ${idx === 0 ? 'highlight' : ''}`}>
+                        {idx === 0 ? <CheckCircle2 size={16} className="feature-check-icon gold" /> : <Check size={16} className="feature-check-icon" />}
+                        <span>{feat}</span>
+                      </div>
+                    ))
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectPlan(card2.name)}
+                  className="btn btn-primary pricing-cta-btn glowing-cta"
+                  id="btn-pricing-pro"
+                >
+                  <span>Get {card2.name}</span>
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            )}
+
+            {/* CARD 3: MULTI-OUTLET / THIRD LANDING PLAN */}
+            {card3 && (
+              <div className="pricing-card glass-panel custom-card">
+                {card3.badge && (
+                  <div className="pricing-card-badge custom-badge">
+                    <Sliders size={12} />
+                    <span>{card3.badge}</span>
+                  </div>
+                )}
+
+                <div className="pricing-card-header">
+                  <div className="pricing-plan-category" style={{ color: '#06B6D4' }}>FRANCHISES & MULTI-BRANCH</div>
+                  <h3 className="pricing-plan-name">{card3.name}</h3>
+                  {card3.tagline && (
+                    <p className="pricing-plan-tagline">
+                      {card3.tagline}
+                    </p>
+                  )}
+                </div>
+
+                {(card3.billingCycle === 'custom' || card3.name.toLowerCase().includes('multi') || card3.name.toLowerCase().includes('custom')) ? (
+                  <>
+                    <div className="pricing-price-box">
+                      <div className="pricing-currency-row">
+                        <span className="pricing-currency">₹</span>
+                        <span className="pricing-amount">{calculateCustomPrice().toLocaleString()}</span>
+                        <span className="pricing-unit">/month</span>
+                      </div>
+                      <div className="pricing-period">
+                        For {customOutlets} Outlets & {customKeywords} Target Keywords
+                      </div>
+                    </div>
+
+                    {/* Sliders Container */}
+                    <div className="pricing-sliders-box">
+                      {/* Outlets Slider */}
+                      <div className="pricing-slider-item">
+                        <div className="slider-label-row">
+                          <span className="slider-title">Outlets / Locations:</span>
+                          <strong className="slider-val-badge">{customOutlets} Outlets</strong>
+                        </div>
+                        <input
+                          type="range"
+                          min="2"
+                          max="10"
+                          step="1"
+                          value={customOutlets}
+                          onChange={(e) => setCustomOutlets(Number(e.target.value))}
+                          className="pricing-range-slider"
+                        />
+                        <div className="slider-sub-info">
+                          Includes {customOutlets} physical acrylic standees
+                        </div>
+                      </div>
+
+                      {/* Keywords Slider */}
+                      <div className="pricing-slider-item">
+                        <div className="slider-label-row">
+                          <span className="slider-title">Target SEO Keywords:</span>
+                          <strong className="slider-val-badge">{customKeywords} Keywords</strong>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="30"
+                          step="5"
+                          value={customKeywords}
+                          onChange={(e) => setCustomKeywords(Number(e.target.value))}
+                          className="pricing-range-slider"
+                        />
+                        <div className="slider-sub-info">
+                          Boosts ranking for {customKeywords} specialties
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="pricing-price-box">
+                    <div className="pricing-currency-row">
+                      <span className="pricing-currency">₹</span>
+                      <span className="pricing-amount">{card3.price}</span>
+                      <span className="pricing-unit">/month</span>
+                    </div>
+                    <div className="pricing-period">{card3.periodLabel || 'per month'}</div>
+                  </div>
+                )}
+
+                {card3.hardwareIncluded && (
+                  <div className="pricing-banner-perk" style={{ margin: '0 0 16px 0' }}>
+                    <Gift size={13} />
+                    <span>{card3.hardwareIncluded}</span>
+                  </div>
+                )}
+
+                <div className="pricing-divider" />
+
+                <div className="pricing-features-list">
+                  {Array.isArray(card3.features) && card3.features.length > 0 ? (
+                    card3.features.map((feat, idx) => (
+                      <div key={idx} className="pricing-feature-item">
+                        <Check size={16} className="feature-check-icon" />
+                        <span>{feat}</span>
+                      </div>
+                    ))
+                  ) : null}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectPlan(`${card3.name} (${customOutlets} Outlets, ${customKeywords} Keywords - ₹${calculateCustomPrice()}/mo)`)}
+                  className="btn btn-secondary pricing-cta-btn"
+                  id="btn-pricing-custom"
+                >
+                  <span>Customize Plan</span>
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Pricing Trust & Guarantee Bar */}
+          <div className="pricing-trust-bar glass-panel">
+            <div className="pricing-trust-item">
+              <ShieldCheck size={20} style={{ color: '#10B981' }} />
+              <div>
+                <strong>Zero Financial Risk</strong>
+                <span>Try our introductory starter plan with full platform features</span>
+              </div>
+            </div>
+            <div className="pricing-trust-item">
+              <QrCode size={20} style={{ color: '#8B5CF6' }} />
+              <div>
+                <strong>Re-assignable Standees</strong>
+                <span>Dynamic cloud QR never becomes obsolete or needs reprint</span>
+              </div>
+            </div>
+            <div className="pricing-trust-item">
+              <Zap size={20} style={{ color: '#F59E0B' }} />
+              <div>
+                <strong>Fast Setup</strong>
+                <span>Digital portal goes live in under 2 minutes</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 5B. FREQUENTLY ASKED QUESTIONS (CUSTOMER PERSPECTIVE)                      */}
+      {/* ========================================================================= */}
+      <section className="landing-faq-section" id="faq">
+        <div className="landing-container">
+          <div className="section-header-centered">
+            <div className="section-eyebrow">
+              <HelpCircle size={14} style={{ color: '#06B6D4' }} />
+              <span>Customer Help & Clarity</span>
+            </div>
+            <h2 className="section-title">Frequently Asked Questions</h2>
+            <p className="section-subtitle">
+              Everything customers need to know about scanning the standee, ready-made review options, and posting directly to Google.
+            </p>
+          </div>
+
+          <div className="faq-accordion-list">
+            {CUSTOMER_FAQS.map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div key={faq.id} className={`faq-item-card glass-panel ${isOpen ? 'open' : ''}`}>
+                  <button
+                    type="button"
+                    className="faq-question-btn"
+                    onClick={() => toggleFaq(idx)}
+                    aria-expanded={isOpen}
+                    id={`faq-btn-${faq.id}`}
+                  >
+                    <div className="faq-question-content">
+                      <span className="faq-tag-badge">{faq.tag}</span>
+                      <span className="faq-question-text">{faq.question}</span>
+                    </div>
+                    <ChevronDown size={18} className={`faq-chevron-icon ${isOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isOpen && (
+                    <div className="faq-answer-collapse">
+                      <p>{faq.answer}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
       {/* 6. BUSINESS ENQUIRY FORM SECTION                                         */}
       {/* ========================================================================= */}
       <section className="landing-enquiry-section" id="enquiry">
@@ -1010,6 +1511,41 @@ export default function LandingPage({
                     <div className={`enquiry-feedback-box ${enquiryFeedback.type}`}>
                       {enquiryFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                       <span>{enquiryFeedback.message}</span>
+                    </div>
+                  )}
+
+                  {/* Selected Pricing Plan Banner */}
+                  {enquiryForm.selectedPlan && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: 'rgba(139, 92, 246, 0.15)',
+                      border: '1px solid rgba(139, 92, 246, 0.4)',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      marginBottom: '16px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Tag size={15} style={{ color: '#F59E0B' }} />
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Selected Plan:</span>
+                        <strong style={{ fontSize: '0.86rem', color: '#A855F7' }}>{enquiryForm.selectedPlan}</strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setEnquiryForm((prev) => ({ ...prev, selectedPlan: '' }))}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          padding: '2px 6px',
+                          fontSize: '0.85rem'
+                        }}
+                        title="Clear plan selection"
+                      >
+                        ✕
+                      </button>
                     </div>
                   )}
 
@@ -1189,6 +1725,8 @@ export default function LandingPage({
                 <li><a href="#businesses" onClick={(e) => { e.preventDefault(); scrollToSection('businesses'); }}>Onboarded Businesses</a></li>
                 <li><a href="#stats" onClick={(e) => { e.preventDefault(); scrollToSection('stats'); }}>Live KPI Performance</a></li>
                 <li><a href="#advantages" onClick={(e) => { e.preventDefault(); scrollToSection('advantages'); }}>Key Advantages</a></li>
+                <li><a href="#pricing" onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}>Pricing Plans</a></li>
+                <li><a href="#faq" onClick={(e) => { e.preventDefault(); scrollToSection('faq'); }}>Frequently Asked Questions</a></li>
                 <li><a href="#enquiry" onClick={(e) => { e.preventDefault(); scrollToSection('enquiry'); }}>Request Standee</a></li>
               </ul>
             </div>
@@ -1270,12 +1808,8 @@ export default function LandingPage({
                 id="link-landing-vasmi"
               >
                 <span className="vasmi-dev-text">Designed and Developed by</span>
-                <span className="vasmi-brand-name">
-                  <span className="vasmi-brand-white">Vasmi</span>
-                  <span className="vasmi-brand-orange">Group</span>
-                </span>
                 <span className="vasmi-logo-wrapper">
-                  <img src={vasmiIcon} alt="Vasmi Group" className="vasmi-logo-img" width="16" height="14" />
+                  <img src={vasmiFullLogo} alt="Vasmi Group - Creating Your Identity" className="vasmi-full-logo-img" />
                 </span>
               </a>
             </div>

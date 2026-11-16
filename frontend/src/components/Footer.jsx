@@ -1,5 +1,5 @@
 import React from 'react';
-import vasmiIcon from '../assets/vasmi_icon.png';
+import vasmiFullLogo from '../assets/vasmi_full_logo.png';
 
 /**
  * Universal Footer for QR-Reviews platform
@@ -8,7 +8,7 @@ import vasmiIcon from '../assets/vasmi_icon.png';
  * 1. © 2026 QR-Review.
  * 2. [Designed and Developed by](https://vasmigroup.com/) on click add this link.
  * 3. On hover of [Designed and Developed by] - change color to orange.
- * 4. On logo, on hover small zoom out (scale 0.88).
+ * 4. Vasmi Group logo image displayed next to "Designed and Developed by".
  */
 export default function Footer({ customStyle = {}, transparent = false }) {
   return (
@@ -30,19 +30,12 @@ export default function Footer({ customStyle = {}, transparent = false }) {
           id="link-vasmi-group"
         >
           <span className="vasmi-dev-text">Designed and Developed by</span>
-          <span className="vasmi-brand-name">
-            <span className="vasmi-brand-white">Vasmi</span>
-            <span className="vasmi-brand-orange">Group</span>
-          </span>
           <span className="vasmi-logo-wrapper">
             <img
-              src={vasmiIcon}
-              alt="Vasmi Group"
-              className="vasmi-logo-img"
-              width="16"
-              height="14"
+              src={vasmiFullLogo}
+              alt="Vasmi Group - Creating Your Identity"
+              className="vasmi-full-logo-img"
             />
-
           </span>
         </a>
       </div>

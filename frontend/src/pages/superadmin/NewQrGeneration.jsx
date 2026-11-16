@@ -20,10 +20,15 @@ import {
   Calendar,
   Search,
   List,
-  LogOut
+  LogOut,
+  Trash2,
+  AlertTriangle,
+  Edit
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import PrintModal from '../../components/PrintModal';
+import BatchPrintUnassignedModal from '../../components/BatchPrintUnassignedModal';
+import EditClientModal from '../../components/EditClientModal';
 import { generateSlug } from '../../utils/slug';
 import { formatPhoneNumber } from '../../utils/phone';
 import config, { getImageUrl } from '../../config';
@@ -43,16 +48,46 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
   const [copiedId, setCopiedId] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [printQr, setPrintQr] = useState(null);
+  const [showBatchPrintModal, setShowBatchPrintModal] = useState(false);
   const [successModalData, setSuccessModalData] = useState(null);
   const [customBatchCount, setCustomBatchCount] = useState(5);
   const [highlightedQrIds, setHighlightedQrIds] = useState([]);
+  const [fetchError, setFetchError] = useState('');
+  const [deletingQr, setDeletingQr] = useState(null);
+  const [isDeletingSingle, setIsDeletingSingle] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [successToast, setSuccessToast] = useState('');
+  const [editingClient, setEditingClient] = useState(null);
+
+  const handleEditClick = async (item) => {
+    if (item.status === 'assigned' && item.assignedClient?.id) {
+      try {
+        const res = await fetch(`${config.API_BASE_URL}/api/clients/${item.assignedClient.id}`);
+        const data = await res.json();
+        if (data.client) {
+          setEditingClient(data.client);
+          return;
+        }
+      } catch (err) {
+        console.error('Failed to load client for edit:', err);
+      }
+      setEditingClient(item.assignedClient);
+    } else {
+      // Unassigned QR -> Go to onboarding with this QR ID
+      onGoToOnboarding(item.qrId);
+    }
+  };
   const highlightTimeoutRef = useRef(null);
+  const safetyTimerRef = useRef(null);
 
   // Clean up highlight timer on unmount
   useEffect(() => {
     return () => {
       if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
+      }
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
       }
     };
   }, []);
@@ -64,7 +99,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
 
     // 2. Identify newly created QR ID(s)
     const idsToHighlight = Array.isArray(createdQrs)
-      ? createdQrs.map((q) => q.qrId || q)
+      ? createdQrs.map((q) => q?.qrId || q).filter(Boolean)
       : [createdQrs?.qrId || createdQrs].filter(Boolean);
 
     if (idsToHighlight.length === 0) return;
@@ -101,16 +136,40 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
     }, 4500);
   };
 
-  // Fetch all existing QRs
+  // Fetch all existing QRs with timeout & error handling
   const fetchQrs = async () => {
+    setFetchError('');
     try {
-      const res = await fetch(`${config.API_BASE_URL}/api/qr/all`);
-      const data = await res.json();
-      if (data.qrs) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      let res;
+      try {
+        res = await fetch(`${config.API_BASE_URL}/api/qr/all`, { signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (!res.ok) {
+        console.warn(`[NewQrGeneration] /api/qr/all responded with status ${res.status}`);
+        setFetchError('Unable to load QR codes from server. Showing local/cached catalog.');
+        return;
+      }
+
+      const text = await res.text();
+      let data = null;
+      try {
+        data = JSON.parse(text);
+      } catch (parseErr) {
+        console.warn('[NewQrGeneration] Response was not valid JSON:', parseErr.message);
+        setFetchError('Server returned unexpected data format.');
+        return;
+      }
+
+      if (data && Array.isArray(data.qrs)) {
         setAllQrs(data.qrs);
         if (data.qrs.length > 0) {
           setLatestQr(prev => {
-            if (prev && data.qrs.some(q => q.qrId === prev.qrId)) {
+            if (prev && data.qrs.some(q => q && q.qrId === prev.qrId)) {
               return prev;
             }
             return data.qrs[0];
@@ -119,13 +178,15 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
           setLatestQr(null);
         }
       }
-      if (data.nextSequence) {
+
+      if (data && data.nextSequence) {
         setNextSequenceFormatted(String(data.nextSequence).padStart(6, '0'));
-      } else if (data.nextSequenceFormatted) {
+      } else if (data && data.nextSequenceFormatted) {
         setNextSequenceFormatted(String(data.nextSequenceFormatted).padStart(6, '0'));
       }
     } catch (err) {
       console.error('Failed to fetch QRs:', err);
+      setFetchError(err.name === 'AbortError' ? 'Connection timed out while loading QRs.' : 'Unable to connect to backend server.');
     } finally {
       setInitialLoading(false);
     }
@@ -133,6 +194,17 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
 
   useEffect(() => {
     fetchQrs();
+
+    // Safety fallback: guaranteed shimmer dismissal after 6.5s to prevent infinite loading
+    safetyTimerRef.current = setTimeout(() => {
+      setInitialLoading(false);
+    }, 6500);
+
+    return () => {
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+      }
+    };
   }, []);
 
   // Generate single dynamic QR auto
@@ -147,7 +219,14 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
         body: JSON.stringify({})
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned invalid response (${res.status})`);
+      }
+
       if (!res.ok) throw new Error(data.error || 'Failed to generate QR');
 
       setLatestQr(data.qr);
@@ -162,7 +241,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
       } catch (e) { }
       await fetchQrs();
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Failed to generate QR');
     } finally {
       setLoading(false);
     }
@@ -178,7 +257,14 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
         body: JSON.stringify({ count })
       });
 
-      const data = await res.json();
+      const text = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(`Server returned invalid response (${res.status})`);
+      }
+
       if (!res.ok) throw new Error(data.error || 'Batch generation failed');
 
       if (data.qrs && data.qrs.length > 0) {
@@ -197,7 +283,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
       }
       await fetchQrs();
     } catch (err) {
-      alert(err.message);
+      alert(err.message || 'Batch generation failed');
     } finally {
       setBatchLoading(false);
     }
@@ -215,24 +301,66 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
+  // Delete a single QR code
+  const handleDeleteSingleQr = async () => {
+    if (!deletingQr) return;
+    try {
+      setIsDeletingSingle(true);
+      setDeleteError('');
+      const res = await fetch(`${config.API_BASE_URL}/api/qr/${encodeURIComponent(deletingQr.qrId)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to delete QR code');
+      }
+      const removedId = deletingQr.qrId;
+      setDeletingQr(null);
+      setSuccessToast(`QR code ${removedId} removed successfully.`);
+      setTimeout(() => setSuccessToast(''), 4000);
+      await fetchQrs();
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete QR code');
+    } finally {
+      setIsDeletingSingle(false);
+    }
+  };
+
   // Open simple standee preview modal on click of thumbnail or standee (same as All Clients)
   const handleOpenQrModal = (qrItem) => {
     if (!qrItem) return;
     setLatestQr(qrItem);
     setPrintQr(qrItem);
+    setHighlightedQrIds([qrItem.qrId]);
   };
 
-  // Filtered QRs
-  const filteredQrs = allQrs.filter(q => {
+  // Select row and populate Active Dynamic QR Preview
+  const handleSelectQrRow = (qrItem) => {
+    if (!qrItem) return;
+    setLatestQr(qrItem);
+    setHighlightedQrIds([qrItem.qrId]);
+  };
+
+  // Filtered QRs with complete null safety
+  const safeAllQrs = Array.isArray(allQrs) ? allQrs : [];
+  const filteredQrs = safeAllQrs.filter(q => {
+    if (!q || !q.qrId) return false;
     const matchesFilter =
       filter === 'all' ? true :
         filter === 'unassigned' ? q.status === 'unassigned' :
           q.status === 'assigned';
 
+    const searchLower = (search || '').trim().toLowerCase();
+    if (!searchLower) return matchesFilter;
+
+    const qrIdStr = (q.qrId || '').toLowerCase();
+    const noteStr = (q.note || '').toLowerCase();
+    const clientNameStr = (q.assignedClient?.name || '').toLowerCase();
+
     const matchesSearch =
-      q.qrId.toLowerCase().includes(search.toLowerCase()) ||
-      (q.note && q.note.toLowerCase().includes(search.toLowerCase())) ||
-      (q.assignedClient && q.assignedClient.name.toLowerCase().includes(search.toLowerCase()));
+      qrIdStr.includes(searchLower) ||
+      noteStr.includes(searchLower) ||
+      clientNameStr.includes(searchLower);
 
     return matchesFilter && matchesSearch;
   });
@@ -251,12 +379,64 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
         </p>
       </div>
 
+      {/* Success Toast */}
+      {successToast && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          background: 'rgba(16, 185, 129, 0.18)',
+          border: '1px solid rgba(16, 185, 129, 0.45)',
+          borderRadius: '10px',
+          padding: '10px 16px',
+          marginBottom: '16px',
+          color: '#10B981',
+          fontSize: '0.86rem',
+          fontWeight: 600,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <CheckCircle2 size={18} />
+          <span>{successToast}</span>
+        </div>
+      )}
+
+      {/* Optional Graceful Error / Offline Notification */}
+      {fetchError && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          background: 'rgba(239, 68, 68, 0.12)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '10px',
+          padding: '10px 16px',
+          marginBottom: '16px',
+          color: '#F87171',
+          fontSize: '0.84rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Info size={16} />
+            <span>{fetchError}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={fetchQrs}
+            style={{ fontSize: '0.74rem', padding: '4px 10px' }}
+          >
+            <RefreshCw size={12} />
+            <span>Retry</span>
+          </button>
+        </div>
+      )}
+
       <div className="qr-generator-grid">
 
         {/* Left Column: QR Generator Form */}
         <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ padding: '6px', borderRadius: '7px', background: 'rgba(109, 36, 186, 0.14)', color: '#6d24ba' }}>
+            <div className="qr-card-icon-wrap">
               <Sparkles size={17} />
             </div>
             <h3 style={{ fontSize: '1rem', margin: 0 }}>Generic Dynamic QR Generator</h3>
@@ -270,27 +450,15 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
             padding: '10px 12px',
             marginBottom: '12px'
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(109, 36, 186, 0.06)',
-              padding: '8px 12px',
-              borderRadius: '7px',
-              fontFamily: 'monospace',
-              fontSize: '1.25rem',
-              fontWeight: 800,
-              justifyContent: 'center',
-              marginBottom: '8px'
-            }}>
-              <span style={{ color: 'var(--text-primary)' }}>QR</span>
-              <span style={{ color: '#11071bff' }} title="6-digit sequential increasing number (e.g. 000001)">{nextSequenceFormatted}</span>
+            <div className="qr-digits-display-box">
+              <span className="qr-digits-prefix">QR</span>
+              <span className="qr-digits-number" title="6-digit sequential increasing number (e.g. 000001)">{nextSequenceFormatted}</span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '15px', fontSize: '0.72rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Prefix: <strong style={{ color: '#11071bff' }}>QR</strong></span>
-              <span style={{ color: 'var(--text-muted)' }}>Format: <strong style={{ color: '#11071bff' }}>(QR{nextSequenceFormatted})</strong></span>
-              <span className="badge" style={{ fontSize: '0.68rem', padding: '2px 8px', background: 'rgba(109, 36, 186, 0.14)', color: '#6d24ba', border: '1px solid rgba(109, 36, 186, 0.25)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Prefix: <strong className="qr-digits-format-val">QR</strong></span>
+              <span style={{ color: 'var(--text-muted)' }}>Format: <strong className="qr-digits-format-val">(QR{nextSequenceFormatted})</strong></span>
+              <span className="qr-auto-inc-badge">
                 Auto Increment
               </span>
             </div>
@@ -299,16 +467,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
           {/* 1-Click Generate Button */}
           <button
             type="button"
-            className="btn btn-primary"
-            style={{
-              width: '100%',
-              height: '36px',
-              fontSize: '0.86rem',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #6d24ba 0%, #5e19a6 100%)',
-              border: 'none',
-              boxShadow: '0 4px 14px rgba(109, 36, 186, 0.3)'
-            }}
+            className={`btn-generate-dynamic-qr ${loading ? 'is-generating' : ''}`}
             disabled={loading || batchLoading}
             onClick={handleGenerate}
             id="btn-generate-single-qr"
@@ -321,7 +480,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
             ) : (
               <>
                 <QrCode size={16} />
-                <span>Generate Dynamic QR (Auto)</span>
+                <span>Generate Dynamic QR</span>
               </>
             )}
           </button>
@@ -332,7 +491,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
           <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
             {/* Header: Title + Badge inline */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              <div style={{ padding: '6px', borderRadius: '7px', background: 'rgba(109, 36, 186, 0.14)', color: '#6d24ba', display: 'flex', alignItems: 'center' }}>
+              <div className="qr-card-icon-wrap">
                 <Eye size={17} />
               </div>
               <h3 style={{ fontSize: '1rem', margin: 0, whiteSpace: 'nowrap' }}>Active Dynamic QR Preview</h3>
@@ -384,6 +543,35 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
                 }}>
                   {latestQr.qrId}
                 </div>
+
+                {latestQr.assignedClient ? (
+                  <div style={{ marginTop: '4px', textAlign: 'center', width: '100%' }}>
+                    <div
+                      style={{ fontSize: '0.74rem', fontWeight: 700, color: '#1E293B', lineHeight: 1.2, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}
+                      title={latestQr.assignedClient.name}
+                    >
+                      {latestQr.assignedClient.name}
+                    </div>
+                    {latestQr.assignedClient.phone && (
+                      <div style={{ fontSize: '0.66rem', color: '#64748B', marginTop: '1px' }}>
+                        {formatPhoneNumber(latestQr.assignedClient.phone)}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ marginTop: '4px', fontSize: '0.68rem', color: '#059669', fontWeight: 600, textAlign: 'center' }}>
+                    Ready for client
+                  </div>
+                )}
+
+                {latestQr.note && (
+                  <div
+                    style={{ fontSize: '0.64rem', color: '#64748B', marginTop: '2px', textAlign: 'center', fontStyle: 'italic', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={latestQr.note}
+                  >
+                    {latestQr.note}
+                  </div>
+                )}
               </div>
 
               {/* Right 50%: Action Controls with Distinct Color Themes */}
@@ -410,7 +598,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
                   <span>{latestQr.status === 'unassigned' ? 'Scan Preview' : 'Open Review'}</span>
                 </button>
 
-                {latestQr.status === 'unassigned' && (
+                {latestQr.status === 'unassigned' ? (
                   <button
                     type="button"
                     className="btn-qr-preview-onboard"
@@ -421,6 +609,26 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
                     <Check size={12} />
                     <span>Onboard Client</span>
                     <ArrowRight size={11} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      height: '28px',
+                      fontSize: '0.74rem',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      borderRadius: '6px'
+                    }}
+                    onClick={() => handleEditClick(latestQr)}
+                    title="Edit assigned client details"
+                    id="btn-edit-assigned-client-preview"
+                  >
+                    <Edit size={12} style={{ color: '#8B5CF6' }} />
+                    <span>Edit Client</span>
                   </button>
                 )}
               </div>
@@ -437,7 +645,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
         {/* Third Column: Dedicated Batch Standee Pre-Generation */}
         <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <div style={{ padding: '6px', borderRadius: '7px', background: 'rgba(109, 36, 186, 0.14)', color: '#6d24ba' }}>
+            <div className="qr-card-icon-wrap">
               <Layers size={17} />
             </div>
             <h3 style={{ fontSize: '1rem', margin: 0 }}>Batch Pre-Generation</h3>
@@ -451,7 +659,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm btn-batch-pack"
                 style={{ padding: '6px 4px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
                 disabled={batchLoading || loading}
                 onClick={() => handleBatchGenerate(3)}
@@ -462,7 +670,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
               </button>
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm btn-batch-pack"
                 style={{ padding: '6px 4px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
                 disabled={batchLoading || loading}
                 onClick={() => handleBatchGenerate(5)}
@@ -473,7 +681,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
               </button>
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm btn-batch-pack"
                 style={{ padding: '6px 4px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}
                 disabled={batchLoading || loading}
                 onClick={() => handleBatchGenerate(10)}
@@ -503,14 +711,14 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
               />
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm btn-batch-generate-custom"
                 style={{ flex: 1, height: '32px', justifyContent: 'center', fontSize: '0.78rem' }}
                 disabled={batchLoading || loading}
                 onClick={() => handleBatchGenerate(customBatchCount)}
                 id="btn-batch-custom"
               >
                 {batchLoading ? <RefreshCw size={12} className="animate-spin" /> : <Layers size={12} />}
-                <span>Generate {customBatchCount} Standees</span>
+                <span>{batchLoading ? 'Generating...' : `Generate ${customBatchCount} Standees`}</span>
               </button>
             </div>
           </div>
@@ -521,7 +729,7 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
       <div className="glass-panel qr-catalog-panel" style={{ marginTop: '14px', padding: '12px 16px', width: '100%', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ color: '#6d24ba', display: 'flex', alignItems: 'center' }}>
+            <div className="qr-catalog-icon-wrap">
               <List size={17} />
             </div>
             <h3 style={{ fontSize: '0.92rem', fontWeight: 700, margin: 0 }}>Dynamic QRs Catalog ({filteredQrs.length})</h3>
@@ -562,11 +770,83 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
                 placeholder="Search QR ID..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ height: '26px', fontSize: '0.76rem', paddingLeft: '26px', width: '160px' }}
+                style={{ height: '26px', fontSize: '0.76rem', paddingLeft: '26px', width: '150px' }}
               />
             </div>
+
+            {/* Pull & Print Empty QRs Button */}
+            <button
+              type="button"
+              className="btn btn-sm btn-print-empty-qrs"
+              onClick={() => setShowBatchPrintModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                height: '26px',
+                padding: '0 12px',
+                fontSize: '0.74rem',
+                fontWeight: 700,
+                borderRadius: '6px',
+                background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+              title="Pull all unassigned QRs with unique IDs, copy IDs, export CSV, and print empty standees or stickers"
+              id="btn-pull-print-unassigned"
+            >
+              <Printer size={13} />
+              <span>Pull & Print Empty QRs ({allQrs.filter(q => q.status === 'unassigned').length})</span>
+            </button>
           </div>
         </div>
+
+        {/* Informational banner when filtered by unassigned */}
+        {filter === 'unassigned' && (
+          <div style={{
+            margin: '8px 0 12px 0',
+            padding: '8px 12px',
+            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.04) 100%)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.78rem', color: '#065F46' }}>
+              <Sparkles size={14} style={{ color: '#10B981', flexShrink: 0 }} />
+              <span>
+                <strong>{allQrs.filter(q => q.status === 'unassigned').length} Unassigned QR(s) available</strong> — You can print physical standees or sticker sheets with prominent <code>STAND-ID</code> badges for field onboarding.
+              </span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => setShowBatchPrintModal(true)}
+              style={{
+                background: '#10B981',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '3px 10px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              <Printer size={12} />
+              <span>Open Print Sheet ({allQrs.filter(q => q.status === 'unassigned').length})</span>
+            </button>
+          </div>
+        )}
 
         {/* Desktop Table of QRs */}
         <div className="catalog-desktop-table data-table-container">
@@ -578,190 +858,349 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
                 <th>Status</th>
                 <th>Assigned Client</th>
                 <th>Generated On</th>
-                <th style={{ width: '128px' }}>Actions</th>
+                <th style={{ width: '260px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredQrs.map((item) => (
-                <tr
-                  key={item.id || item.qrId}
-                  id={`qr-row-${item.qrId}`}
-                  className={highlightedQrIds.includes(item.qrId) ? 'qr-row-highlight' : ''}
-                >
-                  <td>
-                    <img
-                      src={getImageUrl(item.filePath)}
-                      alt={item.qrId}
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        background: '#FFF',
-                        padding: '2px',
-                        borderRadius: '5px',
-                        cursor: 'pointer',
-                        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                        display: 'block'
-                      }}
-                      onClick={() => handleOpenQrModal(item)}
-                      title="Click to preview Standee"
-                    />
-                  </td>
-                  <td>
-                    <code
-                      style={{ fontWeight: 700, color: '#6366F1', cursor: 'pointer', fontSize: '0.82rem' }}
-                      onClick={() => handleOpenQrModal(item)}
-                      title="Click to preview Standee"
-                    >
-                      {item.qrId}
-                    </code>
-                    {item.note && <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.2 }}>{item.note}</div>}
-                  </td>
-                  <td>
-                    <span className={`badge ${item.status === 'assigned' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.66rem', padding: '2px 7px' }}>
-                      {item.status === 'assigned' ? 'Assigned' : 'Unassigned'}
-                    </span>
-                  </td>
-                  <td>
-                    {item.assignedClient ? (
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{item.assignedClient.name}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          <CopyablePhone
-                            phone={item.assignedClient.phone}
-                            displayText={formatPhoneNumber(item.assignedClient.phone)}
-                            style={{ fontSize: '0.7rem' }}
-                          />
+              {filteredQrs.map((item) => {
+                const isHighlighted = highlightedQrIds.includes(item.qrId);
+                return (
+                  <tr
+                    key={item.id || item.qrId}
+                    id={`qr-row-${item.qrId}`}
+                    className={isHighlighted ? 'qr-row-highlight' : ''}
+                    onClick={() => handleSelectQrRow(item)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <td>
+                      <img
+                        src={getImageUrl(item.filePath)}
+                        alt={item.qrId}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          background: '#FFF',
+                          padding: '2px',
+                          borderRadius: '5px',
+                          cursor: 'pointer',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                          display: 'block'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectQrRow(item);
+                          handleOpenQrModal(item);
+                        }}
+                        title="Click to preview Standee"
+                      />
+                    </td>
+                    <td>
+                      <code
+                        style={{
+                          fontWeight: 700,
+                          color: isHighlighted ? '#DDD6FE' : '#6366F1',
+                          cursor: 'pointer',
+                          fontSize: '0.82rem'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectQrRow(item);
+                          handleOpenQrModal(item);
+                        }}
+                        title="Click to preview Standee"
+                      >
+                        {item.qrId}
+                      </code>
+                      {item.note && (
+                        <div style={{ fontSize: '0.68rem', color: isHighlighted ? '#CBD5E1' : 'var(--text-muted)', lineHeight: 1.2 }}>
+                          {item.note}
                         </div>
-                      </div>
-                    ) : (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem' }}>— Ready for client</span>
-                    )}
-                  </td>
-                  <td style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <a
-                        href={getImageUrl(item.filePath)}
-                        download={`${item.qrId}.png`}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '3px 6px', height: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        title="Download QR PNG"
-                      >
-                        <Download size={12} />
-                      </a>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '3px 6px', height: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => setPrintQr(item)}
-                        title="Print Standee"
-                      >
-                        <Printer size={12} />
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '3px 6px', height: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => onTestReview(item.assignedClient ? (item.assignedClient.slug || generateSlug(item.assignedClient.name)) : item.qrId)}
-                        title="Test Review Form"
-                      >
-                        <ExternalLink size={12} />
-                      </button>
-                      {item.status === 'unassigned' && (
-                        <button
-                          className="btn btn-success btn-sm"
-                          style={{ padding: '3px 6px', height: '25px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onClick={() => onGoToOnboarding(item.qrId)}
-                          title="Onboard client with this QR"
-                        >
-                          <ArrowRight size={12} />
-                        </button>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <span className={`badge ${item.status === 'assigned' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.66rem', padding: '2px 7px' }}>
+                        {item.status === 'assigned' ? 'Assigned' : 'Unassigned'}
+                      </span>
+                    </td>
+                    <td>
+                      {item.assignedClient ? (
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '0.8rem', color: isHighlighted ? '#FFFFFF' : 'var(--text-primary)' }}>
+                            {item.assignedClient.name || 'Assigned Business'}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: isHighlighted ? '#CBD5E1' : 'var(--text-muted)' }}>
+                            <CopyablePhone
+                              phone={item.assignedClient.phone}
+                              displayText={formatPhoneNumber(item.assignedClient.phone)}
+                              style={{ fontSize: '0.7rem', color: isHighlighted ? '#CBD5E1' : 'inherit' }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ color: isHighlighted ? '#DDD6FE' : 'var(--text-muted)', fontSize: '0.76rem' }}>— Ready for client</span>
+                      )}
+                    </td>
+                    <td style={{ fontSize: '0.75rem', color: isHighlighted ? '#E2E8F0' : 'var(--text-secondary)' }}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' }}>
+                        {/* 1. Edit */}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            height: '28px',
+                            padding: '0 9px',
+                            fontSize: '0.74rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: isHighlighted ? '#FFFFFF' : 'var(--text-primary)',
+                            borderRadius: '6px'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectQrRow(item);
+                            handleEditClick(item);
+                          }}
+                          title={item.status === 'assigned' ? "Edit assigned client details" : "Configure and onboard client with this QR"}
+                          id={`btn-action-edit-${item.qrId}`}
+                        >
+                          <Edit size={12} style={{ color: isHighlighted ? '#DDD6FE' : '#8B5CF6' }} />
+                          <span>Edit</span>
+                        </button>
+
+                        {/* 2. Review */}
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm"
+                          style={{
+                            height: '28px',
+                            padding: '0 9px',
+                            fontSize: '0.74rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            color: isHighlighted ? '#FFFFFF' : 'var(--text-primary)',
+                            borderRadius: '6px'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelectQrRow(item);
+                            onTestReview(item.assignedClient ? (item.assignedClient.slug || generateSlug(item.assignedClient.name || '')) : item.qrId);
+                          }}
+                          title="Test Review Form"
+                          id={`btn-action-review-${item.qrId}`}
+                        >
+                          <ExternalLink size={12} style={{ color: isHighlighted ? '#7DD3FC' : '#38BDF8' }} />
+                          <span>Review</span>
+                        </button>
+
+                        {/* 3. Onboarding (wide button) */}
+                        {item.status === 'unassigned' ? (
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            style={{
+                              height: '28px',
+                              padding: '0 12px',
+                              fontSize: '0.74rem',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              minWidth: '95px',
+                              justifyContent: 'center',
+                              borderRadius: '6px'
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectQrRow(item);
+                              onGoToOnboarding(item.qrId);
+                            }}
+                            title="Onboard client with this QR"
+                            id={`btn-action-onboard-${item.qrId}`}
+                          >
+                            <UserPlus size={12} />
+                            <span>Onboard</span>
+                            <ArrowRight size={11} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{
+                              height: '28px',
+                              padding: '0 10px',
+                              fontSize: '0.72rem',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              minWidth: '95px',
+                              justifyContent: 'center',
+                              opacity: isHighlighted ? 0.85 : 0.6,
+                              cursor: 'default',
+                              borderRadius: '6px',
+                              color: isHighlighted ? '#FFFFFF' : undefined
+                            }}
+                            disabled
+                            title="Standee already assigned to business"
+                          >
+                            <Check size={11} style={{ color: isHighlighted ? '#6EE7B7' : '#10B981' }} />
+                            <span>Onboarded</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         {/* Mobile Cards List matching Mockup */}
         <div className="catalog-mobile-cards">
-          {filteredQrs.map((item) => (
-            <div
-              key={item.id || item.qrId}
-              id={`qr-mobile-card-${item.qrId}`}
-              className={`mobile-catalog-card ${highlightedQrIds.includes(item.qrId) ? 'qr-row-highlight' : ''}`}
-            >
-              <div className="mobile-card-main-row">
-                <img
-                  src={getImageUrl(item.filePath)}
-                  alt={item.qrId}
-                  className="mobile-card-thumb"
-                  onClick={() => handleOpenQrModal(item)}
-                  title="Click to preview Standee"
-                />
+          {filteredQrs.map((item) => {
+            const isHighlighted = highlightedQrIds.includes(item.qrId);
+            return (
+              <div
+                key={item.id || item.qrId}
+                id={`qr-mobile-card-${item.qrId}`}
+                className={`mobile-catalog-card ${isHighlighted ? 'qr-row-highlight' : ''}`}
+                onClick={() => handleSelectQrRow(item)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="mobile-card-main-row">
+                  <img
+                    src={getImageUrl(item.filePath)}
+                    alt={item.qrId}
+                    className="mobile-card-thumb"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectQrRow(item);
+                      handleOpenQrModal(item);
+                    }}
+                    title="Click to preview Standee"
+                  />
 
-                <div className="mobile-card-info" onClick={() => handleOpenQrModal(item)}>
-                  <div className="mobile-card-qrid">{item.qrId}</div>
-                  <div className="mobile-card-note">
-                    {item.assignedClient
-                      ? item.assignedClient.name
-                      : `Dynamic Standee #${item.qrId.replace(/^QR-?0*/i, '') || item.qrId}`}
+                  <div
+                    className="mobile-card-info"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectQrRow(item);
+                      handleOpenQrModal(item);
+                    }}
+                  >
+                    <div className="mobile-card-qrid" style={{ color: isHighlighted ? '#FFFFFF' : undefined }}>{item.qrId}</div>
+                    <div className="mobile-card-note" style={{ color: isHighlighted ? '#DDD6FE' : undefined }}>
+                      {item.assignedClient?.name
+                        ? item.assignedClient.name
+                        : `Dynamic Standee #${(item.qrId ? item.qrId.replace(/^QR-?0*/i, '') : '') || item.qrId}`}
+                    </div>
                   </div>
-                </div>
 
-                <span
-                  className={`badge ${item.status === 'assigned' ? 'badge-success' : 'badge-warning'}`}
-                  style={{ fontSize: '0.66rem', padding: '2px 8px', textTransform: 'capitalize' }}
-                >
-                  {item.status === 'assigned' ? 'Assigned' : 'Unassigned'}
-                </span>
+                  <span
+                    className={`badge ${item.status === 'assigned' ? 'badge-success' : 'badge-warning'}`}
+                    style={{ fontSize: '0.66rem', padding: '2px 8px', textTransform: 'capitalize' }}
+                  >
+                    {item.status === 'assigned' ? 'Assigned' : 'Unassigned'}
+                  </span>
 
-                <div className="mobile-card-date">
-                  <Calendar size={12} style={{ color: 'var(--text-muted)' }} />
-                  <span>{new Date(item.createdAt).toLocaleDateString()}</span>
-                </div>
+                  <div className="mobile-card-date" style={{ color: isHighlighted ? '#E2E8F0' : undefined }}>
+                    <Calendar size={12} style={{ color: isHighlighted ? '#DDD6FE' : 'var(--text-muted)' }} />
+                    <span>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</span>
+                  </div>
 
-                <div className="mobile-card-actions">
-                  <a
-                    href={getImageUrl(item.filePath)}
-                    download={`${item.qrId}.png`}
-                    className="mobile-action-btn"
-                    title="Download PNG"
-                  >
-                    <Download size={13} />
-                  </a>
-                  <button
-                    type="button"
-                    className="mobile-action-btn"
-                    onClick={() => setPrintQr(item)}
-                    title="Print Standee"
-                  >
-                    <Printer size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    className="mobile-action-btn"
-                    onClick={() => onTestReview(item.assignedClient ? (item.assignedClient.slug || generateSlug(item.assignedClient.name)) : item.qrId)}
-                    title="Test Review Form"
-                  >
-                    <ExternalLink size={13} />
-                  </button>
-                  {item.status === 'unassigned' && (
+                  <div className="mobile-card-actions" style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      className="mobile-action-btn mobile-onboard-action-btn"
-                      onClick={() => onGoToOnboarding(item.qrId)}
-                      title="Onboard Client with this QR"
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        flex: 1,
+                        minHeight: '32px',
+                        fontSize: '0.76rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        color: isHighlighted ? '#FFFFFF' : undefined
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectQrRow(item);
+                        handleEditClick(item);
+                      }}
                     >
-                      <ArrowRight size={14} />
+                      <Edit size={12} style={{ color: isHighlighted ? '#DDD6FE' : '#8B5CF6' }} />
+                      <span>Edit</span>
                     </button>
-                  )}
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        flex: 1,
+                        minHeight: '32px',
+                        fontSize: '0.76rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        color: isHighlighted ? '#FFFFFF' : undefined
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectQrRow(item);
+                        onTestReview(item.assignedClient ? (item.assignedClient.slug || generateSlug(item.assignedClient.name || '')) : item.qrId);
+                      }}
+                    >
+                      <ExternalLink size={12} style={{ color: isHighlighted ? '#7DD3FC' : '#38BDF8' }} />
+                      <span>Review</span>
+                    </button>
+
+                    {item.status === 'unassigned' ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        style={{ flex: 1.5, minHeight: '32px', fontSize: '0.76rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectQrRow(item);
+                          onGoToOnboarding(item.qrId);
+                        }}
+                      >
+                        <UserPlus size={12} />
+                        <span>Onboard</span>
+                        <ArrowRight size={11} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{
+                          flex: 1.5,
+                          minHeight: '32px',
+                          fontSize: '0.74rem',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          opacity: isHighlighted ? 0.85 : 0.6,
+                          color: isHighlighted ? '#FFFFFF' : undefined
+                        }}
+                        disabled
+                      >
+                        <Check size={11} style={{ color: isHighlighted ? '#6EE7B7' : '#10B981' }} />
+                        <span>Onboarded</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -772,6 +1211,112 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
           client={printQr.assignedClient}
           onClose={() => setPrintQr(null)}
         />
+      )}
+
+      {/* Batch Pull & Print Unassigned QRs Modal */}
+      <BatchPrintUnassignedModal
+        isOpen={showBatchPrintModal}
+        onClose={() => setShowBatchPrintModal(false)}
+        initialQrs={allQrs}
+      />
+
+      {/* Delete Single QR Confirmation Modal */}
+      {deletingQr && createPortal(
+        <div
+          className="modal-overlay"
+          onClick={() => !isDeletingSingle && setDeletingQr(null)}
+          style={{ backdropFilter: 'blur(8px)', animation: 'fadeIn 0.2s ease-out', zIndex: 1100 }}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '420px', padding: '24px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#EF4444',
+                flexShrink: 0
+              }}>
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>Delete QR {deletingQr.qrId}?</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Status: {deletingQr.status || 'unassigned'}
+                </p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '16px' }}>
+              Are you sure you want to delete QR <strong>{deletingQr.qrId}</strong>?
+              {deletingQr.assignedClient && (
+                <span style={{ display: 'block', marginTop: '6px', color: '#EF4444' }}>
+                  Warning: Currently assigned to "{deletingQr.assignedClient.name}". The client will be unlinked.
+                </span>
+              )}
+            </p>
+
+            {deleteError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid #EF4444',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                color: '#FCA5A5',
+                fontSize: '0.82rem',
+                marginBottom: '16px'
+              }}>
+                {deleteError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setDeletingQr(null)}
+                disabled={isDeletingSingle}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={handleDeleteSingleQr}
+                disabled={isDeletingSingle}
+                id="btn-confirm-delete-single-qr"
+                style={{
+                  background: '#DC2626',
+                  color: '#FFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600
+                }}
+              >
+                {isDeletingSingle ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    <span>Delete QR</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* QR Generated / View Modal */}
@@ -1270,6 +1815,18 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
           )}
         </div>,
         document.body
+      )}
+
+      {/* Edit Client Modal opened from Actions -> Edit */}
+      {editingClient && (
+        <EditClientModal
+          client={editingClient}
+          onClose={() => setEditingClient(null)}
+          onSaveSuccess={() => {
+            setEditingClient(null);
+            fetchQrs();
+          }}
+        />
       )}
 
       {/* Mobile Bottom User Profile & Sign Out Bar matching Mockup */}

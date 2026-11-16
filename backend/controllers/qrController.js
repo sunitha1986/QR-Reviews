@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 import { Qr } from '../models/index.js';
-import { generateUniqueQrId, generateAndSaveQRCode } from '../services/qrService.js';
+import { generateUniqueQrId, generateAndSaveQRCode, QR_DIR } from '../services/qrService.js';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://qr.vasmigroup.com';
 
@@ -96,17 +98,34 @@ class QrController {
   static async getAllQrs(req, res) {
     try {
       const qrs = await Qr.getAll();
-      const nextSeq = await Qr.calculateNextSequence();
+      let nextSeq = 1;
+      try {
+        nextSeq = await Qr.calculateNextSequence();
+      } catch (seqErr) {
+        console.warn('Could not calculate next sequence from DB, falling back to count:', seqErr.message);
+        nextSeq = (qrs.length || 0) + 1;
+      }
+
       res.json({
-        total: qrs.length,
+        total: Array.isArray(qrs) ? qrs.length : 0,
         nextSequence: nextSeq,
         nextSequenceFormatted: String(nextSeq).padStart(6, '0'),
-        unassignedCount: qrs.filter(q => q.status === 'unassigned').length,
-        assignedCount: qrs.filter(q => q.status === 'assigned').length,
-        qrs
+        unassignedCount: Array.isArray(qrs) ? qrs.filter(q => q && q.status === 'unassigned').length : 0,
+        assignedCount: Array.isArray(qrs) ? qrs.filter(q => q && q.status === 'assigned').length : 0,
+        qrs: Array.isArray(qrs) ? qrs : []
       });
     } catch (err) {
-      res.status(500).json({ error: 'Failed to fetch QRs from DB: ' + err.message });
+      console.error('Error in getAllQrs:', err.message);
+      res.json({
+        total: 0,
+        nextSequence: 1,
+        nextSequenceFormatted: '000001',
+        unassignedCount: 0,
+        assignedCount: 0,
+        qrs: [],
+        fallback: true,
+        error: err.message
+      });
     }
   }
 
@@ -140,6 +159,85 @@ class QrController {
       res.json({ qr });
     } catch (err) {
       res.status(500).json({ error: 'Failed to fetch QR: ' + err.message });
+    }
+  }
+
+  /**
+   * Delete all QR codes, clean up storage, and reset sequence
+   * DELETE /api/qr/all
+   */
+  static async removeAllQrs(req, res) {
+    try {
+      const result = await Qr.deleteAll();
+
+      // Clean up physical files from disk
+      try {
+        if (Array.isArray(result.qrs)) {
+          for (const qr of result.qrs) {
+            if (qr && qr.filename) {
+              const p = path.join(QR_DIR, qr.filename);
+              if (fs.existsSync(p)) {
+                try { fs.unlinkSync(p); } catch (e) {}
+              }
+            }
+          }
+        }
+        // Cleanup any remaining png files in QR_DIR to ensure a clean slate
+        if (fs.existsSync(QR_DIR)) {
+          const files = fs.readdirSync(QR_DIR);
+          for (const file of files) {
+            if (file.toLowerCase().endsWith('.png')) {
+              try {
+                fs.unlinkSync(path.join(QR_DIR, file));
+              } catch (e) {}
+            }
+          }
+        }
+      } catch (fileErr) {
+        console.warn('[QrController] Error removing QR image files:', fileErr.message);
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully cleared all QR codes (${result.deletedCount || 0} removed). Sequence reset to QR000001.`,
+        deletedCount: result.deletedCount || 0
+      });
+    } catch (err) {
+      console.error('Error clearing all QRs:', err);
+      res.status(500).json({ error: 'Failed to clear all QR codes: ' + err.message });
+    }
+  }
+
+  /**
+   * Delete single QR code by qrId
+   * DELETE /api/qr/:qrId
+   */
+  static async deleteQrById(req, res) {
+    try {
+      const { qrId } = req.params;
+      const deletedQr = await Qr.deleteByQrId(qrId);
+      if (!deletedQr) {
+        return res.status(404).json({ error: 'QR Code not found' });
+      }
+
+      // Delete physical file
+      if (deletedQr.filename) {
+        const p = path.join(QR_DIR, deletedQr.filename);
+        if (fs.existsSync(p)) {
+          try {
+            fs.unlinkSync(p);
+          } catch (e) {}
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `QR code ${qrId} deleted successfully`,
+        qr: deletedQr
+      });
+    } catch (err) {
+      console.error('Error deleting QR:', err);
+      res.status(500).json({ error: 'Failed to delete QR code: ' + err.message });
     }
   }
 }

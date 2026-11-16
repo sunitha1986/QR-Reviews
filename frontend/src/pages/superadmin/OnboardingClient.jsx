@@ -6,6 +6,7 @@ import {
   MapPin,
   QrCode,
   CheckCircle2,
+  AlertCircle,
   Sparkles,
   Lock,
   ArrowRight,
@@ -22,16 +23,23 @@ import {
   ChevronDown,
   Search,
   Edit,
-  Loader2
+  Loader2,
+  CreditCard,
+  Tag,
+  Plus,
+  Lightbulb,
+  RotateCcw
 } from 'lucide-react';
 import PrintModal from '../../components/PrintModal';
 import EditClientModal from '../../components/EditClientModal';
-import QrCameraScannerModal from '../../components/QrCameraScannerModal';
+import QrCameraScannerModal, { extractQrIdFromText } from '../../components/QrCameraScannerModal';
 import { generateSlug, getClientReviewUrl } from '../../utils/slug';
 import { extractPlaceId, buildGoogleReviewUrl } from '../../utils/placeId';
 import { formatPhoneNumber, cleanPhoneNumber } from '../../utils/phone';
+import { resolveCategory, CATEGORY_DATA, POPULAR_CATEGORY_KEYWORDS } from '../../data/aiSuggestions';
 import config, { getImageUrl } from '../../config';
 import CopyablePhone from '../../components/CopyablePhone';
+import vasmiFullLogo from '../../assets/vasmi_full_logo.png';
 import vasmiIcon from '../../assets/vasmi_icon.png';
 
 /**
@@ -257,7 +265,7 @@ function SearchableQrDropdown({ unassignedQrs, value, onChange }) {
     setSearch('');
   };
 
-  const selectedQr = unassignedQrs.find(q => q.qrId === value);
+  const selectedQr = (Array.isArray(unassignedQrs) ? unassignedQrs : []).find(q => q && q.qrId === value);
   const isAuto = value === 'auto';
   const isCustomScanned = value && value !== 'auto' && !selectedQr;
 
@@ -505,24 +513,207 @@ function SearchableQrDropdown({ unassignedQrs, value, onChange }) {
   );
 }
 
+const ONBOARDING_DRAFT_KEY = 'qr_reviews_onboarding_form_draft';
+
+const loadSavedDraft = () => {
+  try {
+    const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+};
+
 export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, onTestReview }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [businessLocation, setBusinessLocation] = useState('');
-  const [businessType, setBusinessType] = useState('');
+  const [draft] = useState(() => loadSavedDraft());
+
+  const [name, setName] = useState(draft?.name || '');
+  const [phone, setPhone] = useState(draft?.phone || '');
+  const [address, setAddress] = useState(draft?.address || '');
+  const [businessLocation, setBusinessLocation] = useState(draft?.businessLocation || '');
+  const [businessType, setBusinessType] = useState(draft?.businessType || '');
   const [categories, setCategories] = useState([]);
-  const [googleMapUrl, setGoogleMapUrl] = useState('');
-  const [placeId, setPlaceId] = useState('');
-  const [googleReviewUrl, setGoogleReviewUrl] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
-  const [logoPreview, setLogoPreview] = useState('');
-  const [logoFileName, setLogoFileName] = useState('');
+  const [googleMapUrl, setGoogleMapUrl] = useState(draft?.googleMapUrl || '');
+  const [placeId, setPlaceId] = useState(draft?.placeId || '');
+  const [googleReviewUrl, setGoogleReviewUrl] = useState(draft?.googleReviewUrl || '');
+  const [logoUrl, setLogoUrl] = useState(draft?.logoUrl || '');
+  const [logoPreview, setLogoPreview] = useState(draft?.logoPreview || draft?.logoUrl || '');
+  const [logoFileName, setLogoFileName] = useState(draft?.logoFileName || '');
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [logoInputMode, setLogoInputMode] = useState('file'); // 'file' | 'url'
-  const [selectedQrId, setSelectedQrId] = useState(preselectedQrId || '');
-  const [customPassword, setCustomPassword] = useState('admin@123');
-  const [isPhoneMandatory, setIsPhoneMandatory] = useState(false);
+  const [logoInputMode, setLogoInputMode] = useState(draft?.logoInputMode || 'file'); // 'file' | 'url'
+  const [savedLocalLogoPath, setSavedLocalLogoPath] = useState(draft?.savedLocalLogoPath || '');
+  const [selectedQrId, setSelectedQrId] = useState(preselectedQrId || draft?.selectedQrId || '');
+  const [selectedQrDetails, setSelectedQrDetails] = useState(null);
+  const [customPassword, setCustomPassword] = useState(draft?.customPassword !== undefined ? draft.customPassword : 'admin@123');
+  const [isPhoneMandatory, setIsPhoneMandatory] = useState(draft?.isPhoneMandatory !== undefined ? Boolean(draft.isPhoneMandatory) : false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState(draft?.subscriptionPlan || 'Starter Launch Trial (₹9)');
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+  const [keywords, setKeywords] = useState(Array.isArray(draft?.keywords) ? draft.keywords : []);
+  const [keywordInput, setKeywordInput] = useState('');
+
+  // Auto-update selectedQrId if preselectedQrId prop changes (e.g. from New QR Generation action)
+  useEffect(() => {
+    if (preselectedQrId && preselectedQrId !== selectedQrId) {
+      setSelectedQrId(preselectedQrId);
+    }
+  }, [preselectedQrId]);
+
+  // Keep live standee QR details synced for immediate image preview
+  useEffect(() => {
+    if (!selectedQrId || selectedQrId === 'auto') {
+      setSelectedQrDetails(null);
+      return;
+    }
+    const found = Array.isArray(unassignedQrs)
+      ? unassignedQrs.find(q => q && q.qrId && q.qrId.toUpperCase() === selectedQrId.toUpperCase())
+      : null;
+    if (found) {
+      setSelectedQrDetails(found);
+    } else {
+      fetch(`${config.API_BASE_URL}/api/public/qr-info/${encodeURIComponent(selectedQrId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.qr) {
+            setSelectedQrDetails(data.qr);
+          } else if (data && data.filePath) {
+            setSelectedQrDetails(data);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [selectedQrId, unassignedQrs]);
+
+  // Persist form data to localStorage so it is retained across tab switches until completed or cleared
+  useEffect(() => {
+    try {
+      const dataToSave = {
+        name,
+        phone,
+        address,
+        businessLocation,
+        businessType,
+        googleMapUrl,
+        placeId,
+        googleReviewUrl,
+        logoUrl,
+        logoPreview,
+        logoFileName,
+        savedLocalLogoPath,
+        logoInputMode,
+        selectedQrId,
+        customPassword,
+        isPhoneMandatory,
+        subscriptionPlan,
+        keywords
+      };
+
+      const hasContent = Boolean(
+        (name || '').trim() ||
+        (phone || '').trim() ||
+        (address || '').trim() ||
+        (businessLocation || '').trim() ||
+        (businessType || '').trim() ||
+        (placeId || '').trim() ||
+        (logoUrl || '').trim() ||
+        (selectedQrId || '').trim() ||
+        (Array.isArray(keywords) && keywords.length > 0)
+      );
+
+      if (hasContent) {
+        localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(dataToSave));
+      }
+    } catch (err) {
+      console.warn('Failed to save onboarding draft:', err);
+    }
+  }, [
+    name,
+    phone,
+    address,
+    businessLocation,
+    businessType,
+    googleMapUrl,
+    placeId,
+    googleReviewUrl,
+    logoUrl,
+    logoPreview,
+    logoFileName,
+    savedLocalLogoPath,
+    logoInputMode,
+    selectedQrId,
+    customPassword,
+    isPhoneMandatory,
+    subscriptionPlan,
+    keywords
+  ]);
+
+  const hasAnyData = Boolean(
+    (name || '').trim() ||
+    (phone || '').trim() ||
+    (address || '').trim() ||
+    (businessLocation || '').trim() ||
+    (businessType || '').trim() ||
+    (placeId || '').trim() ||
+    (logoUrl || '').trim() ||
+    (selectedQrId || '').trim() ||
+    (Array.isArray(keywords) && keywords.length > 0)
+  );
+
+  const handleClearForm = () => {
+    if (window.confirm('Clear all entered onboarding fields and start fresh?')) {
+      try {
+        localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+      } catch (err) {}
+      setName('');
+      setPhone('');
+      setAddress('');
+      setBusinessLocation('');
+      setGoogleMapUrl('');
+      setPlaceId('');
+      setGoogleReviewUrl('');
+      setLogoUrl('');
+      setLogoPreview('');
+      setLogoFileName('');
+      setSavedLocalLogoPath('');
+      setSelectedQrId('');
+      setBusinessType('');
+      setCustomPassword('admin@123');
+      setIsPhoneMandatory(false);
+      setKeywords([]);
+      setKeywordInput('');
+      setError('');
+    }
+  };
+
+  // Resolved category metadata for live keyword suggestions during onboarding
+  const resolvedCategoryKey = resolveCategory(businessType, name);
+  const categoryMeta = CATEGORY_DATA[resolvedCategoryKey] || CATEGORY_DATA['General Business'];
+  const suggestedCategoryKeywords = POPULAR_CATEGORY_KEYWORDS[resolvedCategoryKey] || POPULAR_CATEGORY_KEYWORDS['General Business'];
+
+  const handleAddKeyword = () => {
+    const clean = keywordInput.trim().replace(/^[#,]+/, '');
+    if (!clean) return;
+    const parts = clean.split(',').map(s => s.trim()).filter(Boolean);
+    setKeywords(prev => {
+      const next = [...prev];
+      for (const p of parts) {
+        if (!next.some(k => k.toLowerCase() === p.toLowerCase())) {
+          next.push(p);
+        }
+      }
+      return next;
+    });
+    setKeywordInput('');
+  };
+
+  const handleAddSuggestedKeyword = (sug) => {
+    if (!keywords.some(k => k.toLowerCase() === sug.toLowerCase())) {
+      setKeywords(prev => [...prev, sug]);
+    }
+  };
+
+  const handleRemoveKeyword = (indexToRemove) => {
+    setKeywords(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   const [unassignedQrs, setUnassignedQrs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -533,39 +724,47 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
   const [copiedItem, setCopiedItem] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [downloadingExternalLogo, setDownloadingExternalLogo] = useState(false);
-  const [savedLocalLogoPath, setSavedLocalLogoPath] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [scannedFeedback, setScannedFeedback] = useState(null);
 
-  const handleScanQrSuccess = (scannedId, rawData, meta) => {
+  const handleScanQrSuccess = async (scannedId, rawData, meta) => {
     if (!scannedId) return;
+    setShowScanner(false);
+
+    const cleanId = extractQrIdFromText(scannedId) || scannedId;
+
     if (meta && meta.isAssigned) {
-      setSelectedQrId(scannedId);
+      setSelectedQrId(cleanId);
       setScannedFeedback({
         type: 'error',
         isAssigned: true,
         clientName: meta.clientName,
-        message: `Standee ${scannedId} is ALREADY ASSIGNED to ${meta.clientName || 'another business'}!`
+        message: `Standee ${cleanId} is ALREADY ASSIGNED to ${meta.clientName || 'another business'}!`
       });
       return;
     }
-    const found = unassignedQrs.find(q => q.qrId.toUpperCase() === scannedId.toUpperCase());
+
+    // Refresh unassigned QRs from backend to ensure latest list
+    const freshQrs = await fetchUnassigned();
+    const list = Array.isArray(freshQrs) && freshQrs.length > 0 ? freshQrs : (unassignedQrs || []);
+    const found = list.find(q => q && q.qrId && q.qrId.toUpperCase() === cleanId.toUpperCase());
+
     if (found) {
       setSelectedQrId(found.qrId);
+      setSelectedQrDetails(found);
       setScannedFeedback({
         type: 'success',
         isAssigned: false,
         message: `Scanned & matched available standee: ${found.qrId}${found.note ? ` (${found.note})` : ''}`
       });
     } else {
-      setSelectedQrId(scannedId);
+      setSelectedQrId(cleanId);
       setScannedFeedback({
-        type: 'error',
-        isAssigned: true,
-        message: `Standee ${scannedId} is already assigned and cannot be re-used.`
+        type: 'success',
+        isAssigned: false,
+        message: `Scanned dynamic standee: ${cleanId}`
       });
     }
-    setShowScanner(false);
   };
 
   const handleShareWhatsApp = (client) => {
@@ -635,8 +834,26 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
     }
   };
 
+  // Fetch dynamic customizable subscription plans
+  const fetchSubscriptionPlans = async () => {
+    try {
+      const res = await fetch(`${config.API_BASE_URL}/api/subscription-plans?activeOnly=true`);
+      const data = await res.json();
+      if (data.plans && Array.isArray(data.plans) && data.plans.length > 0) {
+        setSubscriptionPlans(data.plans);
+        const def = data.plans.find(p => p.isDefault) || data.plans[0];
+        if (def && (!subscriptionPlan || subscriptionPlan === 'Starter Launch Trial (₹9)')) {
+          setSubscriptionPlan(def.name);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load customizable subscription plans:', err);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
+    fetchSubscriptionPlans();
   }, []);
 
   // Fetch unassigned QRs
@@ -796,12 +1013,18 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
           logoUrl: logoToSubmit,
           qrId: qrToUse,
           customPassword: customPassword || 'admin@123',
-          isPhoneMandatory: Boolean(isPhoneMandatory)
+          isPhoneMandatory: Boolean(isPhoneMandatory),
+          subscriptionPlan: subscriptionPlan || 'Starter Launch Trial (₹9)',
+          keywords: keywords.join(', ')
         })
       });
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Onboarding failed');
+
+      try {
+        localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+      } catch (err) {}
 
       setSuccessClient(data.client);
 
@@ -821,6 +1044,10 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
       setBusinessType('');
       setCustomPassword('admin@123');
       setIsPhoneMandatory(false);
+      setKeywords([]);
+      setKeywordInput('');
+      const def = subscriptionPlans.find(p => p.isDefault) || subscriptionPlans[0];
+      setSubscriptionPlan(def ? def.name : 'Starter Launch Trial (₹9)');
 
       // Refresh unassigned QRs so the assigned QR is removed immediately
       await fetchUnassigned();
@@ -837,336 +1064,213 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
 
   return (
     <div className="fade-in">
-      {/* Client Onboarded Cross-Verification Popup Modal */}
+      {/* Simple Custom Success Dialog */}
       {successClient && (
         <div className="modal-overlay" style={{ zIndex: 1050 }} onClick={() => setSuccessClient(null)}>
           <div
             className="modal-content"
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: '620px',
-              width: '100%',
-              padding: 0,
-              overflow: 'hidden',
+              maxWidth: '460px',
+              width: '92%',
+              padding: '24px 22px',
               borderRadius: '16px',
-              border: '1px solid rgba(16, 185, 129, 0.35)',
-              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.45)',
-              background: 'var(--bg-surface)'
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(16, 185, 129, 0.15)',
+              background: 'var(--bg-card)',
+              position: 'relative',
+              textAlign: 'center'
             }}
           >
-            {/* Top Accent Gradient */}
-            <div style={{ height: '4px', background: 'linear-gradient(90deg, #10B981, #6366F1, #8B5CF6)' }} />
+            {/* Top Close Button */}
+            <button
+              type="button"
+              onClick={() => setSuccessClient(null)}
+              style={{
+                position: 'absolute',
+                top: '14px',
+                right: '14px',
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '5px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.15s ease'
+              }}
+              title="Close Dialog"
+            >
+              <X size={15} />
+            </button>
 
-            {/* Modal Header */}
+            {/* Glowing Success Celebration Icon */}
             <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border-subtle)',
+              width: '54px',
+              height: '54px',
+              borderRadius: '50%',
+              background: 'rgba(16, 185, 129, 0.18)',
+              border: '1.5px solid rgba(16, 185, 129, 0.45)',
+              color: '#10B981',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(99, 102, 241, 0.04) 100%)'
+              justifyContent: 'center',
+              margin: '0 auto 12px auto',
+              boxShadow: '0 0 20px rgba(16, 185, 129, 0.28)'
             }}>
+              <CheckCircle2 size={30} />
+            </div>
+
+            {/* Header Titles */}
+            <h3 style={{ fontSize: '1.22rem', fontWeight: 800, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
+              Client Onboarded Successfully!
+            </h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 16px 0', lineHeight: 1.4 }}>
+              <strong style={{ color: 'var(--text-primary)' }}>{successClient.name}</strong> is now live and linked to Standee <strong style={{ color: '#8B5CF6' }}>{successClient.qrId}</strong>.
+            </p>
+
+            {/* Concise Summary Card */}
+            <div style={{
+              background: 'var(--bg-main)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              padding: '12px 14px',
+              textAlign: 'left',
+              marginBottom: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px'
+            }}>
+              {/* Business Identity Row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'rgba(16, 185, 129, 0.2)',
-                  color: '#10B981',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '8px',
+                  background: '#FFFFFF',
+                  border: '1px solid var(--border-subtle)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  padding: '2px'
                 }}>
-                  <CheckCircle2 size={22} />
+                  {successClient.logoUrl ? (
+                    <img src={getImageUrl(successClient.logoUrl)} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <Building2 size={20} style={{ color: 'var(--primary)' }} />
+                  )}
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1.08rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                    Client Onboarded Successfully
-                  </h3>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-                    Cross-verify details below. Use <strong>Edit</strong> to modify if any detail needs change.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSuccessClient(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  display: 'flex'
-                }}
-                title="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Modal Body / Cross-Verification Grid */}
-            <div style={{ padding: '18px 20px', maxHeight: '72vh', overflowY: 'auto' }}>
-              {/* Business Identity Card */}
-              <div style={{
-                background: 'var(--bg-main)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '12px',
-                padding: '12px 14px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                marginBottom: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                  <div style={{
-                    width: '42px',
-                    height: '42px',
-                    borderRadius: '8px',
-                    background: '#FFFFFF',
-                    border: '1px solid var(--border-subtle)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                    padding: '2px'
-                  }}>
-                    {successClient.logoUrl ? (
-                      <img src={getImageUrl(successClient.logoUrl)} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    ) : (
-                      <Building2 size={22} style={{ color: 'var(--primary)' }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.94rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {successClient.name}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <span className="badge badge-primary" style={{ fontSize: '0.64rem', padding: '1px 6px' }}>
+                      {successClient.businessType}
+                    </span>
+                    {(successClient.businessLocation || successClient.address) && (
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        • {successClient.businessLocation || successClient.address?.split(',')[0]}
+                      </span>
                     )}
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {successClient.name}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', flexWrap: 'wrap' }}>
-                      <span className="badge badge-primary" style={{ fontSize: '0.66rem', padding: '1px 7px' }}>
-                        {successClient.businessType}
-                      </span>
-                      {(successClient.businessLocation || successClient.address) && (
-                        <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          <MapPin size={11} style={{ color: 'var(--accent)' }} />
-                          {successClient.businessLocation || successClient.address?.split(',')[0]}
-                        </span>
-                      )}
-                    </div>
-                  </div>
                 </div>
-
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.68rem' }}>
-                    Live & Linked
-                  </span>
-                </div>
+                <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '2px 7px', flexShrink: 0 }}>
+                  Active
+                </span>
               </div>
 
-              {/* 2-Column Cross-Verification Details */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '10px',
-                marginBottom: '12px'
-              }}>
-                {/* 1. Registered Phone */}
-                <div style={{
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '3px' }}>
-                    Registered Phone (Login ID)
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <strong style={{ fontSize: '0.88rem', color: 'var(--text-primary)', letterSpacing: '0.02em' }}>
+              <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '2px 0' }} />
+
+              {/* Login Credentials */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.78rem' }}>
+                {/* Phone */}
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '7px 9px', borderRadius: '7px', border: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Login (Phone)
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                    <strong style={{ color: 'var(--text-primary)', fontSize: '0.8rem' }}>
                       +91 {cleanPhoneNumber(successClient.phone || successClient.username)}
                     </strong>
                     <button
                       type="button"
                       onClick={() => handleCopyText(`+91${cleanPhoneNumber(successClient.phone || successClient.username)}`, 'phone')}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '2px 7px', fontSize: '0.7rem', height: '22px' }}
-                      title="Copy Phone Number"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px', color: copiedItem === 'phone' ? '#10B981' : 'var(--text-muted)' }}
+                      title="Copy phone"
                     >
-                      {copiedItem === 'phone' ? <Check size={12} style={{ color: '#10B981' }} /> : <Copy size={12} />}
+                      {copiedItem === 'phone' ? <Check size={12} /> : <Copy size={12} />}
                     </button>
                   </div>
                 </div>
 
-                {/* 2. Portal Password */}
-                <div style={{
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '3px' }}>
-                    Portal Password
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <strong style={{ fontSize: '0.88rem', color: 'var(--warning)', fontFamily: 'monospace' }}>
+                {/* Password */}
+                <div style={{ background: 'rgba(255, 255, 255, 0.03)', padding: '7px 9px', borderRadius: '7px', border: '1px solid var(--border-subtle)' }}>
+                  <span style={{ fontSize: '0.67rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Password
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                    <strong style={{ color: 'var(--warning)', fontFamily: 'monospace', fontSize: '0.82rem' }}>
                       {successClient.password || 'admin@123'}
                     </strong>
                     <button
                       type="button"
                       onClick={() => handleCopyText(successClient.password || 'admin@123', 'pass')}
-                      className="btn btn-secondary btn-sm"
-                      style={{ padding: '2px 7px', fontSize: '0.7rem', height: '22px' }}
-                      title="Copy Password"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px', color: copiedItem === 'pass' ? '#10B981' : 'var(--text-muted)' }}
+                      title="Copy password"
                     >
-                      {copiedItem === 'pass' ? <Check size={12} style={{ color: '#10B981' }} /> : <Copy size={12} />}
+                      {copiedItem === 'pass' ? <Check size={12} /> : <Copy size={12} />}
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {/* 3. Linked Dynamic QR ID */}
-                <div style={{
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '3px' }}>
-                    Linked Dynamic QR ID
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <QrCode size={14} style={{ color: '#6366F1' }} />
-                    <code style={{ fontSize: '0.84rem', fontWeight: 700, color: '#4F46E5' }}>
-                      {successClient.qrId}
-                    </code>
-                  </div>
+              {/* Review Link Row */}
+              <div style={{ background: 'rgba(99, 102, 241, 0.06)', padding: '7px 9px', borderRadius: '7px', border: '1px solid rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>
+                    Customer Review Link
+                  </span>
+                  <a
+                    href={`/${successClient.slug || generateSlug(successClient.name) || successClient.qrId}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '0.76rem', color: 'var(--primary)', fontWeight: 600, textDecoration: 'underline', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                  >
+                    {getClientReviewUrl(successClient, successClient.qrId)}
+                  </a>
                 </div>
-
-                {/* 4. Google Place ID */}
-                <div style={{
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '3px' }}>
-                    Google Place ID
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                    <code style={{ fontSize: '0.78rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '170px' }}>
-                      {successClient.placeId || 'Linked'}
-                    </code>
-                    {successClient.googleReviewUrl && (
-                      <a
-                        href={successClient.googleReviewUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: 'var(--accent)', display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '0.7rem', flexShrink: 0 }}
-                        title="Test Google Review Page"
-                      >
-                        <ExternalLink size={12} />
-                        <span>Test</span>
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                {/* 5. Customer Review Link (Full Width) */}
-                <div style={{
-                  gridColumn: '1 / -1',
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '3px' }}>
-                    Customer Review URL
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <a
-                      href={`/${successClient.slug || generateSlug(successClient.name) || successClient.qrId}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ color: 'var(--primary)', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'underline', wordBreak: 'break-all' }}
-                    >
-                      {getClientReviewUrl(successClient, successClient.qrId)}
-                    </a>
-                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => handleCopyText(getClientReviewUrl(successClient, successClient.qrId), 'link')}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '2px 8px', fontSize: '0.7rem', height: '24px' }}
-                        title="Copy Customer Review Link"
-                      >
-                        {copiedItem === 'link' ? <Check size={12} style={{ color: '#10B981' }} /> : <Copy size={12} />}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onTestReview ? onTestReview(successClient.slug || generateSlug(successClient.name) || successClient.qrId) : window.open(`/${successClient.slug || generateSlug(successClient.name) || successClient.qrId}`, '_blank')}
-                        className="btn btn-secondary btn-sm"
-                        style={{ padding: '2px 8px', fontSize: '0.7rem', height: '24px' }}
-                        title="Open Review Page in New Tab"
-                      >
-                        <ExternalLink size={12} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 6. Full Address (Full Width) */}
-                <div style={{
-                  gridColumn: '1 / -1',
-                  background: 'var(--bg-main)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em', marginBottom: '2px' }}>
-                    Full Address
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)' }}>
-                    {successClient.address || '—'}
-                  </div>
+                <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyText(getClientReviewUrl(successClient, successClient.qrId), 'link')}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '3px 7px', fontSize: '0.7rem', height: '24px' }}
+                    title="Copy Link"
+                  >
+                    {copiedItem === 'link' ? <Check size={12} style={{ color: '#10B981' }} /> : <Copy size={12} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onTestReview ? onTestReview(successClient.slug || generateSlug(successClient.name) || successClient.qrId) : window.open(`/${successClient.slug || generateSlug(successClient.name) || successClient.qrId}`, '_blank')}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '3px 7px', fontSize: '0.7rem', height: '24px' }}
+                    title="Open in new tab"
+                  >
+                    <ExternalLink size={12} />
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Modal Actions Footer: Edit Details, Share WhatsApp, Print Standee, Done */}
-            <div style={{
-              padding: '12px 20px',
-              borderTop: '1px solid var(--border-subtle)',
-              background: 'var(--bg-main)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '10px',
-              flexWrap: 'wrap'
-            }}>
-              {/* EDIT OPTION: Click to edit any field if change is needed */}
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setShowEditModal(true)}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  borderColor: 'rgba(109, 36, 186, 0.4)',
-                  color: 'var(--text-primary)',
-                  fontWeight: 600,
-                  padding: '6px 12px',
-                  height: '32px'
-                }}
-                id="btn-verify-edit-client"
-                title="Edit client details if any change is needed"
-              >
-                <Edit size={14} style={{ color: 'var(--primary)' }} />
-                <span>Edit Details</span>
-              </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                {/* Share WhatsApp */}
                 <button
                   type="button"
                   className="btn btn-sm"
@@ -1177,17 +1281,20 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                     border: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '5px',
                     boxShadow: '0 2px 8px rgba(37, 211, 102, 0.3)',
-                    height: '32px',
-                    padding: '0 12px'
+                    height: '34px',
+                    fontSize: '0.8rem',
+                    borderRadius: '8px'
                   }}
                   onClick={() => handleShareWhatsApp(successClient)}
                 >
                   <Share2 size={13} />
-                  <span>Share via WhatsApp</span>
+                  <span>WhatsApp</span>
                 </button>
 
+                {/* Print Standee */}
                 <button
                   type="button"
                   className="btn btn-sm"
@@ -1198,33 +1305,69 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                     border: 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '5px',
-                    height: '32px',
-                    padding: '0 12px'
+                    height: '34px',
+                    fontSize: '0.8rem',
+                    borderRadius: '8px'
                   }}
                   onClick={() => setPrintModalData({
                     qrId: successClient.qrId,
                     filename: `${successClient.qrId}.png`,
+                    filePath: successClient.filePath || successClient.qrFilePath,
+                    logoUrl: successClient.logoUrl,
                     name: successClient.name,
                     address: successClient.address,
                     businessLocation: successClient.businessLocation || successClient.address
                   })}
+                  title="Configure QRs per A4 sheet setting and print standees/cards for this client"
                 >
                   <Printer size={13} />
-                  <span>Print Standee</span>
+                  <span>Print Standee / Cards</span>
                 </button>
+              </div>
 
+              {/* Done Button */}
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                style={{
+                  fontWeight: 700,
+                  height: '36px',
+                  borderRadius: '8px',
+                  fontSize: '0.86rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+                onClick={() => setSuccessClient(null)}
+              >
+                <Check size={14} />
+                <span>Done</span>
+              </button>
+
+              {/* Edit Details Link */}
+              <div style={{ marginTop: '4px' }}>
                 <button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowEditModal(true)}
                   style={{
-                    fontWeight: 700,
-                    height: '32px',
-                    padding: '0 14px'
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.74rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '2px 6px',
+                    textDecoration: 'underline'
                   }}
-                  onClick={() => setSuccessClient(null)}
+                  title="Need to modify something?"
                 >
-                  <span>Done</span>
+                  <Edit size={11} />
+                  <span>Need to change details? Edit Client</span>
                 </button>
               </div>
             </div>
@@ -1246,7 +1389,7 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
 
       {/* Main Form Layout */}
       {(() => {
-        const selectedQrItem = unassignedQrs.find(q => q.qrId === selectedQrId);
+        const selectedQrItem = selectedQrDetails || (Array.isArray(unassignedQrs) ? unassignedQrs.find(q => q && q.qrId === selectedQrId) : null);
         return (
           <div className="onboarding-main-layout" style={{
             display: 'grid',
@@ -1256,13 +1399,37 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
           }}>
             {/* Compact Onboarding Form */}
             <div className="glass-panel" style={{ padding: '20px 22px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <div style={{ padding: '7px', borderRadius: '8px', background: 'rgba(109, 36, 186, 0.12)', color: 'var(--primary)', display: 'flex' }}>
-                  <UserPlus size={18} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '7px', borderRadius: '8px', background: 'rgba(109, 36, 186, 0.12)', color: 'var(--primary)', display: 'flex' }}>
+                    <UserPlus size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Client Onboarding</h3>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0 }}>Client Onboarding</h3>
-                </div>
+
+                {hasAnyData && (
+                  <button
+                    type="button"
+                    onClick={handleClearForm}
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      fontSize: '0.74rem',
+                      color: '#EF4444',
+                      height: '28px',
+                      padding: '0 10px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      borderColor: 'rgba(239, 68, 68, 0.3)'
+                    }}
+                    title="Clear all entered onboarding fields and start fresh"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Clear Form</span>
+                  </button>
+                )}
               </div>
 
               {error && (
@@ -1641,29 +1808,7 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                     )}
                   </div>
 
-                  {/* 6. Full Address */}
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '4px', height: '24px' }}>
-                      <label className="form-label" htmlFor="client-address" style={{ fontSize: '0.78rem', marginBottom: 0 }}>
-                        Full Address <span style={{ color: 'var(--danger)' }}>*</span>
-                      </label>
-                    </div>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        id="client-address"
-                        type="text"
-                        className="form-input"
-                        style={{ paddingLeft: '34px', height: '36px', fontSize: '0.84rem' }}
-                        placeholder="Door #, Street, Area, City, Pin Code"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        required
-                      />
-                      <MapPin size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    </div>
-                  </div>
-
-                  {/* 7. Google Place ID */}
+                  {/* 6. Google Place ID */}
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', height: '24px' }}>
                       <label className="form-label" htmlFor="client-place-id" style={{ fontSize: '0.78rem', marginBottom: 0 }}>
@@ -1690,6 +1835,28 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                         required
                       />
                       <ExternalLink size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    </div>
+                  </div>
+
+                  {/* 7. Full Address */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', height: '24px' }}>
+                      <label className="form-label" htmlFor="client-address" style={{ fontSize: '0.78rem', marginBottom: 0 }}>
+                        Full Address <span style={{ color: 'var(--danger)' }}>*</span>
+                      </label>
+                    </div>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        id="client-address"
+                        type="text"
+                        className="form-input"
+                        style={{ paddingLeft: '34px', height: '36px', fontSize: '0.84rem' }}
+                        placeholder="Door #, Street, Area, City, Pin Code"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        required
+                      />
+                      <MapPin size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     </div>
                   </div>
 
@@ -1777,17 +1944,23 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                     )}
                   </div>
 
-                  {/* 10. Client Portal Password (spans 2 columns) */}
-                  <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
-                    <label className="form-label" htmlFor="client-password" style={{ fontSize: '0.78rem', marginBottom: '4px' }}>
-                      Client Portal Password
-                    </label>
+                  {/* 10. Client Portal Password (Left Column) */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', height: '24px' }}>
+                      <label className="form-label" htmlFor="client-password" style={{ fontSize: '0.78rem', marginBottom: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <Lock size={13} style={{ color: 'var(--primary)' }} />
+                        <span>Client Portal Password</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        Default: admin@123
+                      </span>
+                    </div>
                     <div style={{ position: 'relative' }}>
                       <input
                         id="client-password"
                         type="text"
                         className="form-input"
-                        style={{ paddingLeft: '34px', height: '36px', fontSize: '0.84rem' }}
+                        style={{ paddingLeft: '34px', height: '38px', fontSize: '0.84rem' }}
                         placeholder="Default: admin@123"
                         value={customPassword}
                         onChange={(e) => setCustomPassword(e.target.value)}
@@ -1796,7 +1969,198 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                     </div>
                   </div>
 
-                  {/* 11. Customer Phone Requirement on Review Page (Radio Buttons) */}
+                  {/* 11. Subscription Plan (Right Column - Next to Portal Password) */}
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', height: '24px' }}>
+                      <label className="form-label" htmlFor="onboard-subscription-plan" style={{ fontSize: '0.78rem', marginBottom: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <CreditCard size={13} style={{ color: 'var(--primary)' }} />
+                        <span>Subscription Plan</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--accent)' }}>
+                        Default Opt-In Plan
+                      </span>
+                    </div>
+                    <select
+                      id="onboard-subscription-plan"
+                      className="form-select"
+                      value={subscriptionPlan}
+                      onChange={(e) => setSubscriptionPlan(e.target.value)}
+                      style={{
+                        height: '38px',
+                        fontSize: '0.84rem',
+                        fontWeight: 600,
+                        borderRadius: '8px',
+                        color: 'var(--text-primary, #F8FAFC)',
+                        background: 'var(--bg-card, rgba(30, 27, 75, 0.6))',
+                        border: '1px solid var(--border-subtle, rgba(255, 255, 255, 0.15))',
+                        width: '100%',
+                        padding: '0 10px'
+                      }}
+                    >
+                      {subscriptionPlans.length > 0 ? (
+                        subscriptionPlans.map((p) => (
+                          <option key={p.id} value={p.name} style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                            {p.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Starter Launch Free Trial" style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                            Starter Launch Free Trial
+                          </option>
+                          <option value="Business Pro Monthly (₹150/mo)" style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                            Business Pro Monthly (₹150/mo)
+                          </option>
+                          <option value="Multi-Outlet Customizer" style={{ background: '#1E1B4B', color: '#F8FAFC' }}>
+                            Multi-Outlet Customizer
+                          </option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+
+                  {/* 12. Keywords & Specialties (AI Review Advantage - spans 2 columns) */}
+                  <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
+                      <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Sparkles size={14} style={{ color: '#8B5CF6' }} />
+                        <span>Business Keywords & Specialties</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>(Optional - AI Review Advantage)</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--accent)' }}>
+                        AI will weave these into customer review options
+                      </span>
+                    </div>
+
+                    {/* Keywords Tags Chips */}
+                    {keywords.length > 0 && (
+                      <div style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '6px',
+                        marginBottom: '8px',
+                        padding: '8px 10px',
+                        background: 'var(--bg-main)',
+                        borderRadius: '8px',
+                        border: '1px solid var(--border-subtle)'
+                      }}>
+                        {keywords.map((kw, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              background: 'linear-gradient(135deg, rgba(109, 36, 186, 0.25) 0%, rgba(139, 92, 246, 0.18) 100%)',
+                              border: '1px solid rgba(167, 139, 250, 0.35)',
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            <span>{kw}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveKeyword(idx)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                padding: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.color = '#EF4444'}
+                              onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                              title={`Remove "${kw}"`}
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Keyword Add Input Bar */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                      <div style={{ position: 'relative', flex: 1 }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          placeholder="Type a specialty (e.g. Rooftop seating, Fast service, Friendly staff) & press Enter..."
+                          value={keywordInput}
+                          onChange={(e) => setKeywordInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddKeyword();
+                            }
+                          }}
+                          style={{ paddingLeft: '32px', height: '36px', fontSize: '0.82rem' }}
+                        />
+                        <Tag size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddKeyword}
+                        disabled={!keywordInput.trim()}
+                        className="btn btn-secondary btn-sm"
+                        style={{ height: '36px', padding: '0 12px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <Plus size={14} />
+                        <span>Add</span>
+                      </button>
+                    </div>
+
+                    {/* Quick Suggested Keywords for the Category */}
+                    {suggestedCategoryKeywords.length > 0 && (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '5px' }}>
+                          <Lightbulb size={12} style={{ color: '#F59E0B' }} />
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                            Quick Add for {categoryMeta?.categoryLabel || businessType || 'Business'}:
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                          {suggestedCategoryKeywords.slice(0, 8).map((sug) => {
+                            const isAdded = keywords.some(k => k.toLowerCase() === sug.toLowerCase());
+                            return (
+                              <button
+                                key={sug}
+                                type="button"
+                                onClick={() => handleAddSuggestedKeyword(sug)}
+                                disabled={isAdded}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2px 8px',
+                                  borderRadius: '5px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 500,
+                                  cursor: isAdded ? 'default' : 'pointer',
+                                  background: isAdded ? 'rgba(16, 185, 129, 0.1)' : 'var(--bg-main)',
+                                  border: isAdded ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid var(--border-subtle)',
+                                  color: isAdded ? '#10B981' : 'var(--text-secondary)',
+                                  opacity: isAdded ? 0.7 : 1,
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                {isAdded ? <Check size={10} /> : <Plus size={10} style={{ opacity: 0.5 }} />}
+                                <span>{sug}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 13. Customer Phone Requirement on Review Page (Radio Buttons - spans 2 columns) */}
                   <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '4px' }}>
                       <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: 0, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -2016,25 +2380,58 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                     rel="noopener noreferrer"
                     className="vasmi-dev-link"
                     style={{ textDecoration: 'none' }}
-                    title="Developed by Vasmi Group - https://vasmigroup.com"
+                    title="Designed and Developed by Vasmi Group - https://vasmigroup.com"
                   >
-                    <span className="vasmi-dev-text" style={{ fontSize: '0.72rem' }}>Developed by</span>
-                    <span className="vasmi-brand-name" style={{ fontSize: '0.72rem' }}>
-                      <span className="vasmi-brand-white">Vasmi</span>
-                      <span className="vasmi-brand-orange">Group</span>
+                    <span className="vasmi-dev-text" style={{ fontSize: '0.70rem' }}>
+                      Designed and Developed by
                     </span>
                     <span className="vasmi-logo-wrapper">
                       <img
-                        src={vasmiIcon}
-                        alt="Vasmi Group"
-                        className="vasmi-logo-img"
-                        width="15"
-                        height="13"
+                        src={vasmiFullLogo}
+                        alt="Vasmi Group - Creating Your Identity"
+                        className="vasmi-full-logo-img"
+                        style={{ height: '14px', width: 'auto' }}
                       />
                     </span>
                   </a>
                 </div>
               </div>
+
+              {/* Quick Print Button from Live Preview */}
+              {selectedQrItem && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setPrintModalData({
+                    qrId: selectedQrItem.qrId,
+                    filename: `${selectedQrItem.qrId}.png`,
+                    filePath: selectedQrItem.filePath,
+                    logoUrl: logoPreview || logoUrl,
+                    name: name || 'Business Name',
+                    address: address,
+                    businessLocation: businessLocation || address
+                  })}
+                  style={{
+                    marginTop: '12px',
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    height: '32px',
+                    background: 'rgba(109, 36, 186, 0.12)',
+                    border: '1px solid rgba(109, 36, 186, 0.3)',
+                    color: 'var(--text-primary)'
+                  }}
+                  title="Configure QRs per A4 sheet and print cards"
+                >
+                  <Printer size={13} style={{ color: '#8B5CF6' }} />
+                  <span>Print Standee / Cards (A4 Setting)</span>
+                </button>
+              )}
             </div>
           </div>
         );

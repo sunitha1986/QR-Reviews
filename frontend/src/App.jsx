@@ -5,6 +5,7 @@ import './styles/app.css';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ResponsiveNav from './components/ResponsiveNav';
 
 // Pages
 import Login from './pages/Login';
@@ -18,9 +19,13 @@ import Settings from './pages/superadmin/Settings';
 import ClientProfile from './pages/admin/ClientProfile';
 import ClientKeywords from './pages/admin/ClientKeywords';
 import CustomerData from './pages/admin/CustomerData';
+import Subscriptions from './pages/admin/Subscriptions';
+import ClientManagement from './pages/superadmin/ClientManagement';
 import CustomerReviewForm from './pages/customer/CustomerReviewForm';
 import LandingPage from './pages/LandingPage';
+import QuickReviewScannerModal from './components/QuickReviewScannerModal';
 import config from './config';
+import { applyColorTheme, getSavedThemeId } from './utils/colorThemes';
 
 // Helper to extract review identifier from URL pathname (supports both /:slug and /review/:slug)
 function extractReviewTarget(path) {
@@ -31,7 +36,7 @@ function extractReviewTarget(path) {
   }
   const clean = path.replace(/^\/+|\/+$/g, '');
   if (!clean) return null;
-  const reserved = ['login', 'admin', 'superadmin', 'api', 'dashboard', 'settings', 'favicon.ico'];
+  const reserved = ['login', 'admin', 'superadmin', 'api', 'dashboard', 'settings', 'favicon.ico', 'scan'];
   if (reserved.includes(clean.toLowerCase())) {
     return null;
   }
@@ -56,6 +61,11 @@ export default function App() {
   // Track login view vs landing page when unauthenticated
   const [showLogin, setShowLogin] = useState(() => {
     return window.location.pathname.toLowerCase() === '/login';
+  });
+
+  // Track instant standee camera scanner (e.g. /scan)
+  const [showQuickScanner, setShowQuickScanner] = useState(() => {
+    return window.location.pathname.toLowerCase() === '/scan';
   });
 
   const [preselectedQrForOnboard, setPreselectedQrForOnboard] = useState('');
@@ -88,6 +98,38 @@ export default function App() {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  const activeBusinessId = user?.role === 'admin' ? (user.clientId || user.id) : null;
+
+  // Universal Business Color & Gradient Theme (scoped per business; Superadmin always constant)
+  const [colorThemeId, setColorThemeId] = useState(() => {
+    if (user?.role === 'superadmin') return 'royal-violet';
+    return getSavedThemeId(activeBusinessId);
+  });
+
+  useEffect(() => {
+    if (user?.role === 'superadmin') {
+      setColorThemeId('royal-violet');
+      applyColorTheme('royal-violet');
+    } else if (user?.role === 'admin') {
+      const bId = user.clientId || user.id;
+      const bTheme = user.colorTheme || getSavedThemeId(bId);
+      if (bTheme) {
+        setColorThemeId(bTheme);
+        applyColorTheme(bTheme, bId);
+      }
+    } else {
+      applyColorTheme('royal-violet');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user?.role === 'superadmin') {
+      applyColorTheme('royal-violet');
+    } else {
+      applyColorTheme(colorThemeId, activeBusinessId);
+    }
+  }, [colorThemeId, theme, activeBusinessId, user?.role]);
+
   // Active tab inside portal
   const [activeTab, setActiveTab] = useState(() => {
     if (!user) return 'dashboard';
@@ -97,6 +139,7 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedClientForAdminView, setSelectedClientForAdminView] = useState('');
+  const [clientManagementSubTab, setClientManagementSubTab] = useState('profile');
 
   const handleRefresh = () => {
     setRefreshKey((prev) => prev + 1);
@@ -107,6 +150,7 @@ export default function App() {
     const handlePopState = () => {
       setCustomerReviewQrId(extractReviewTarget(window.location.pathname));
       setShowLogin(window.location.pathname.toLowerCase() === '/login');
+      setShowQuickScanner(window.location.pathname.toLowerCase() === '/scan');
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -116,7 +160,7 @@ export default function App() {
   // Update active tab when user role changes
   useEffect(() => {
     if (user) {
-      if (user.role === 'admin' && !['profile', 'keywords', 'customer-data'].includes(activeTab)) {
+      if (user.role === 'admin' && !['profile', 'keywords', 'customer-data', 'subscriptions'].includes(activeTab)) {
         setActiveTab('profile');
       }
     }
@@ -127,16 +171,34 @@ export default function App() {
     setUser(userData);
     localStorage.setItem('qr_review_user', JSON.stringify(userData));
     localStorage.setItem('qr_review_token', token);
+    if (userData.role === 'admin') {
+      const bId = userData.clientId || userData.id;
+      const bTheme = userData.colorTheme || getSavedThemeId(bId);
+      if (bTheme) {
+        setColorThemeId(bTheme);
+        applyColorTheme(bTheme, bId);
+      }
+    }
     setActiveTab(userData.role === 'superadmin' ? 'dashboard' : 'profile');
   };
 
-  // Logout handler
+  // Logout handler - navigate directly to login screen
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem('qr_review_user');
     localStorage.removeItem('qr_review_token');
-    window.history.pushState({}, '', '/');
-    setShowLogin(false);
+    window.history.pushState({}, '', '/login');
+    setShowLogin(true);
+  };
+
+  // Update user subscription plan across state & local storage
+  const handleUpdateUserPlan = (newPlan) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, subscriptionPlan: newPlan };
+      localStorage.setItem('qr_review_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   // Open login portal screen
@@ -151,9 +213,29 @@ export default function App() {
     setShowLogin(false);
   };
 
-  // Navigate to customer review preview (clean URL /:slug or /:qrId)
+  // Navigate to customer review preview (clean URL /:slug or /:qrId) in a new tab (target="_blank")
   const handleOpenCustomerReview = (qrOrSlug, altSlug) => {
     const target = altSlug || qrOrSlug || user?.slug || user?.qrId || 'QR000001';
+    window.open(`/${target}`, '_blank');
+  };
+
+  // Open instant standee camera scanner (with audio feedback & auto navigation)
+  const handleOpenQuickScanner = () => {
+    window.history.pushState({}, '', '/scan');
+    setShowQuickScanner(true);
+  };
+
+  // Close scanner and clean URL
+  const handleCloseQuickScanner = () => {
+    setShowQuickScanner(false);
+    if (window.location.pathname.toLowerCase() === '/scan') {
+      window.history.pushState({}, '', user ? '/' : '/');
+    }
+  };
+
+  // On successful standee scan: immediately navigate to customer review form
+  const handleQuickScannerSuccess = (target) => {
+    setShowQuickScanner(false);
     window.history.pushState({}, '', `/${target}`);
     setCustomerReviewQrId(target);
   };
@@ -196,12 +278,20 @@ export default function App() {
     }
 
     return (
-      <LandingPage
-        onOpenLogin={handleOpenLogin}
-        onOpenCustomerReview={handleOpenCustomerReview}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-      />
+      <>
+        <LandingPage
+          onOpenLogin={handleOpenLogin}
+          onOpenCustomerReview={handleOpenCustomerReview}
+          onOpenQuickScanner={handleOpenQuickScanner}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+        />
+        <QuickReviewScannerModal
+          isOpen={showQuickScanner}
+          onClose={handleCloseQuickScanner}
+          onNavigateToReview={handleQuickScannerSuccess}
+        />
+      </>
     );
   }
 
@@ -219,6 +309,11 @@ export default function App() {
         onLogout={handleLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        colorThemeId={colorThemeId}
+        onSelectColorTheme={(newThemeId, bId) => {
+          setColorThemeId(newThemeId);
+          applyColorTheme(newThemeId, bId || activeBusinessId);
+        }}
       />
 
       {/* Main Layout Area */}
@@ -231,6 +326,17 @@ export default function App() {
           onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
           onRefresh={handleRefresh}
           onNavigate={(tab) => setActiveTab(tab)}
+          onOpenQuickScanner={handleOpenQuickScanner}
+        />
+
+        {/* Adaptive Hybrid Navigation (Tablet Top Strip & Mobile Bottom Dock) */}
+        <ResponsiveNav
+          user={user}
+          activeTab={activeTab}
+          setActiveTab={(tab) => {
+            setActiveTab(tab);
+            setMobileMenuOpen(false);
+          }}
         />
 
         <main className="content-body" key={refreshKey}>
@@ -270,7 +376,8 @@ export default function App() {
                   onGoToOnboarding={() => setActiveTab('onboard')}
                   onNavigateToClient={(tab, clientId) => {
                     setSelectedClientForAdminView(clientId);
-                    setActiveTab(tab);
+                    setClientManagementSubTab(tab === 'customer-data' ? 'customer-data' : tab === 'keywords' ? 'keywords' : 'profile');
+                    setActiveTab('client-management');
                   }}
                 />
               )}
@@ -299,31 +406,24 @@ export default function App() {
                 />
               )}
 
-              {/* Super Admin Access to Client Features */}
-              {activeTab === 'customer-data' && (
-                <CustomerData
+              {/* Super Admin Unified Client Management (Profile, Keywords, Customer Data) */}
+              {(activeTab === 'client-management' || activeTab === 'profile' || activeTab === 'keywords' || activeTab === 'customer-data') && (
+                <ClientManagement
                   user={user}
                   selectedClientId={selectedClientForAdminView}
                   onSelectClient={setSelectedClientForAdminView}
                   onTestReview={handleOpenCustomerReview}
+                  initialTab={activeTab === 'customer-data' ? 'customer-data' : activeTab === 'keywords' ? 'keywords' : (clientManagementSubTab || 'profile')}
+                  onTabChange={setClientManagementSubTab}
+                  onNavigate={setActiveTab}
                 />
               )}
 
-              {activeTab === 'keywords' && (
-                <ClientKeywords
+              {activeTab === 'subscriptions' && (
+                <Subscriptions
                   user={user}
-                  selectedClientId={selectedClientForAdminView}
-                  onSelectClient={setSelectedClientForAdminView}
-                  onTestReview={handleOpenCustomerReview}
-                />
-              )}
-
-              {activeTab === 'profile' && (
-                <ClientProfile
-                  user={user}
-                  selectedClientId={selectedClientForAdminView}
-                  onSelectClient={setSelectedClientForAdminView}
-                  onTestReview={handleOpenCustomerReview}
+                  onNavigate={setActiveTab}
+                  onUpdatePlan={handleUpdateUserPlan}
                 />
               )}
             </>
@@ -336,6 +436,7 @@ export default function App() {
                 <ClientProfile
                   user={user}
                   onTestReview={handleOpenCustomerReview}
+                  onNavigate={setActiveTab}
                 />
               )}
 
@@ -352,6 +453,14 @@ export default function App() {
                   onTestReview={handleOpenCustomerReview}
                 />
               )}
+
+              {activeTab === 'subscriptions' && (
+                <Subscriptions
+                  user={user}
+                  onNavigate={setActiveTab}
+                  onUpdatePlan={handleUpdateUserPlan}
+                />
+              )}
             </>
           )}
         </main>
@@ -359,6 +468,13 @@ export default function App() {
         {/* Global Portal Footer */}
         <Footer />
       </div>
+
+      {/* Quick QR Standee Camera Scanner with Sound & Instant Navigation */}
+      <QuickReviewScannerModal
+        isOpen={showQuickScanner}
+        onClose={handleCloseQuickScanner}
+        onNavigateToReview={handleQuickScannerSuccess}
+      />
     </div>
   );
 }

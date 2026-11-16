@@ -3,6 +3,115 @@
  * Note: Review suggestions are generated 100% dynamically via Google Gemini AI (no hardcoded review strings).
  */
 
+export const POPULAR_CATEGORY_KEYWORDS = {
+  'Restaurant & Cafe': [
+    'Rooftop ambiance',
+    'Wood-fired pizza',
+    'Delicious food',
+    'Fast service',
+    'Cozy seating',
+    'Courteous staff',
+    'Fresh coffee',
+    'Hygienic kitchen',
+    'Generous portions',
+    'Family friendly',
+    'Tasty desserts',
+    'Prompt billing'
+  ],
+  'Healthcare & Clinic': [
+    'Gentle doctors',
+    'Minimal waiting time',
+    'Clean & sterile clinic',
+    'Caring nurses',
+    'Modern diagnostics',
+    'Painless treatment',
+    'Helpful reception',
+    'Transparent consultation fees',
+    'Patient guidance',
+    'Family health care'
+  ],
+  'Hotel & Resort': [
+    'Spacious rooms',
+    'Comfortable beds',
+    'Peaceful stay',
+    'Delicious breakfast buffet',
+    'Helpful front desk',
+    'Clean swimming pool',
+    'Fast Wi-Fi',
+    'Prompt room service',
+    'Scenic views',
+    'Hassle-free check-in'
+  ],
+  'Retail & Shopping': [
+    'Trendy collection',
+    'Top quality merchandise',
+    'Fast billing counter',
+    'Affordable prices',
+    'Helpful store staff',
+    'Neat aisles',
+    'Great discount offers',
+    'Wide product variety',
+    'Easy exchange policy',
+    'Pleasant shopping vibe'
+  ],
+  'Salon & Spa': [
+    'Expert hair stylists',
+    'Relaxing massage',
+    'Top hygiene standards',
+    'Soothing ambiance',
+    'Premium beauty products',
+    'Punctual appointments',
+    'Skin rejuvenation',
+    'Attentive personal care',
+    'Great hair makeover',
+    'Pampering experience'
+  ],
+  'Automotive & Garage': [
+    'Honest estimates',
+    'Skilled mechanics',
+    'Timely vehicle delivery',
+    'Genuine spare parts',
+    'Fair & transparent billing',
+    'Prompt oil service',
+    'Clean workshop',
+    'Accurate diagnostics',
+    'Helpful service advisors'
+  ],
+  'Gym & Fitness Center': [
+    'Modern equipment',
+    'Certified personal trainers',
+    'Clean locker rooms',
+    'Motivating energy',
+    'Spacious workout floor',
+    'Personalized fitness plan',
+    'Great workout playlist',
+    'Hygienic weights area',
+    'Positive community vibe'
+  ],
+  'Education & Coaching': [
+    'Dedicated faculty',
+    'Clear concept explanation',
+    'Patient doubt clearing',
+    'Well-planned study material',
+    'Inspiring mentors',
+    'Interactive classes',
+    'Confidence building',
+    'Regular test reviews',
+    'Friendly learning environment'
+  ],
+  'General Business': [
+    'Professional team',
+    'Prompt response',
+    'Transparent pricing',
+    'Dependable service',
+    'Friendly customer care',
+    'Top quality workmanship',
+    'Hassle-free experience',
+    'Honest communication',
+    'Fast turnaround time'
+  ]
+};
+
 export const CATEGORY_DATA = {
   'Healthcare & Clinic': {
     categoryLabel: 'Healthcare & Hospital',
