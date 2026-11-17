@@ -23,7 +23,9 @@ import {
   Trash2,
   AlertTriangle,
   MessageSquareText,
-  Sparkles
+  Sparkles,
+  Phone,
+  UserPlus
 } from 'lucide-react';
 import PrintModal from '../../components/PrintModal';
 import EditClientModal from '../../components/EditClientModal';
@@ -234,7 +236,7 @@ export default function AllClients({ onTestReview, onGoToOnboarding, onNavigateT
             <Download size={24} />
           </div>
           <div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Export Master Excel</div>
+            <div className="stat-val" style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.1rem)', lineHeight: 1.25 }}>Export Master Excel</div>
             <div className="stat-label">Download All Reviews (.xlsx)</div>
           </div>
         </div>
@@ -242,16 +244,16 @@ export default function AllClients({ onTestReview, onGoToOnboarding, onNavigateT
 
       {/* Main Table Card */}
       <div className="glass-panel" style={{ padding: '16px 20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '1.25rem' }}>All Onboarded Clients Directory</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+        <div className="all-clients-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+          <div className="all-clients-title-group">
+            <h3 style={{ fontSize: '1.25rem', margin: 0 }}>All Onboarded Clients Directory</h3>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '3px 0 0 0' }}>
               Manage onboarded clients, assigned dynamic QRs, and Google Review targets.
             </p>
           </div>
 
-          <div className="responsive-toolbar-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div className="responsive-search-wrap" style={{ position: 'relative', width: '260px', flex: 1, minWidth: '200px' }}>
+          <div className="responsive-toolbar-actions all-clients-toolbar" style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="responsive-search-wrap all-clients-search-wrap" style={{ position: 'relative', width: '260px', flex: 1, minWidth: '200px' }}>
               <input
                 type="text"
                 className="form-input"
@@ -263,45 +265,42 @@ export default function AllClients({ onTestReview, onGoToOnboarding, onNavigateT
               <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             </div>
 
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={fetchClients}
-              title="Refresh Client List"
-            >
-              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-            </button>
-
-            {clients.length > 0 && (
+            <div className="responsive-btn-group all-clients-btn-group">
               <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  setDeleteError('');
-                  setDeletingAllModal(true);
-                }}
-                style={{
-                  background: 'rgba(239, 68, 68, 0.12)',
-                  border: '1px solid rgba(239, 68, 68, 0.35)',
-                  color: '#EF4444',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600
-                }}
-                id="btn-remove-all-clients"
-                title="Permanently remove all clients and assigned QRs"
+                className="btn btn-secondary btn-sm all-clients-refresh-btn"
+                onClick={fetchClients}
+                title="Refresh Client List"
+                aria-label="Refresh client list"
+                id="btn-refresh-clients"
               >
-                <Trash2 size={14} />
-                <span>Remove All Clients</span>
+                <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
               </button>
-            )}
 
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={onGoToOnboarding}
-            >
-              <span>+ Onboard New Client</span>
-            </button>
+              {clients.length > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm all-clients-remove-all-btn"
+                  onClick={() => {
+                    setDeleteError('');
+                    setDeletingAllModal(true);
+                  }}
+                  id="btn-remove-all-clients"
+                  title="Permanently remove all clients and assigned QRs"
+                >
+                  <Trash2 size={14} />
+                  <span>Remove All</span>
+                </button>
+              )}
+
+              <button
+                className="btn btn-primary btn-sm all-clients-onboard-btn"
+                onClick={onGoToOnboarding}
+                id="btn-onboard-new-client"
+              >
+                <UserPlus size={14} />
+                <span>+ Onboard Client</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -322,208 +321,356 @@ export default function AllClients({ onTestReview, onGoToOnboarding, onNavigateT
             </button>
           </div>
         ) : (
-          <div className="data-table-container">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Client / Business</th>
-                  <th>Assigned QR Code</th>
-                  <th>Contact Phone</th>
-                  <th>Reviews</th>
-                  <th style={{ textAlign: 'center', width: '170px' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredClients.map((client) => {
-                  const qrUrl = client?.qrDetails?.filePath ? getImageUrl(client.qrDetails.filePath) : getImageUrl(`/uploads/qr-codes/${client.qrId}.png`);
-                  return (
-                    <tr key={client.id}>
-                      {/* Name & Type with Logo */}
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {client.logoUrl ? (
-                            <div style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '8px',
-                              background: '#FFFFFF',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              overflow: 'hidden',
-                              padding: '2px',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                              flexShrink: 0
-                            }}>
-                              <img
-                                src={getImageUrl(client.logoUrl)}
-                                alt={client.name}
-                                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                              />
-                            </div>
-                          ) : (
-                            <div style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '8px',
-                              background: 'linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#FFF',
-                              fontWeight: 700,
-                              fontSize: '0.9rem',
-                              flexShrink: 0
-                            }}>
-                              {client.name.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>{client.name}</div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
-                              <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-                                {client.businessType || 'Partner'}
-                              </span>
-                              {client.isPhoneMandatory ? (
-                                <span className="badge" style={{ fontSize: '0.66rem', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                                  Phone Mandatory
+          <>
+            {/* Desktop Table View */}
+            <div className="all-clients-desktop-table data-table-container">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Client / Business</th>
+                    <th>Assigned QR Code</th>
+                    <th>Contact Phone</th>
+                    <th>Reviews</th>
+                    <th style={{ textAlign: 'center', width: '170px' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClients.map((client) => {
+                    const qrUrl = client?.qrDetails?.filePath ? getImageUrl(client.qrDetails.filePath) : getImageUrl(`/uploads/qr-codes/${client.qrId}.png`);
+                    return (
+                      <tr key={client.id}>
+                        {/* Name & Type with Logo */}
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            {client.logoUrl ? (
+                              <div style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '8px',
+                                background: '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                padding: '2px',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                                flexShrink: 0
+                              }}>
+                                <img
+                                  src={getImageUrl(client.logoUrl)}
+                                  alt={client.name}
+                                  style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                />
+                              </div>
+                            ) : (
+                              <div style={{
+                                width: '38px',
+                                height: '38px',
+                                borderRadius: '8px',
+                                background: 'linear-gradient(135deg, #4F46E5 0%, #06B6D4 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#FFF',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                flexShrink: 0
+                              }}>
+                                {client.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <div>
+                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.92rem' }}>{client.name}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                                <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                                  {client.businessType || 'Partner'}
                                 </span>
-                              ) : null}
+                                {client.isPhoneMandatory ? (
+                                  <span className="badge" style={{ fontSize: '0.66rem', background: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                                    Phone Mandatory
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* QR Thumbnail & Code */}
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <img
-                            src={qrUrl}
-                            alt={`QR for ${client.name}`}
-                            style={{
-                              width: '38px',
-                              height: '38px',
-                              background: '#FFFFFF',
-                              padding: '2px',
-                              borderRadius: '6px',
-                              border: '1px solid #CBD5E1',
-                              cursor: 'pointer'
-                            }}
-                            onClick={() => setPrintQr({
-                              qrId: client.qrId,
-                              filename: `${client.qrId}.png`,
-                              name: client.name,
-                              address: client.address,
-                              businessLocation: client.businessLocation || client.address,
-                              logoUrl: client.logoUrl
-                            })}
-                            title="Click to view & print standee"
-                          />
-                          <code
-                            style={{ fontWeight: 700, color: '#A5B4FC', fontSize: '0.85rem', cursor: 'pointer' }}
-                            onClick={() => setPrintQr({
-                              qrId: client.qrId,
-                              filename: `${client.qrId}.png`,
-                              name: client.name,
-                              address: client.address,
-                              businessLocation: client.businessLocation || client.address,
-                              logoUrl: client.logoUrl
-                            })}
-                            title="Click to view & print standee"
+                        {/* QR Thumbnail & Code */}
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <img
+                              src={qrUrl}
+                              alt={`QR for ${client.name}`}
+                              style={{
+                                width: '38px',
+                                height: '38px',
+                                background: '#FFFFFF',
+                                padding: '2px',
+                                borderRadius: '6px',
+                                border: '1px solid #CBD5E1',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => setPrintQr({
+                                qrId: client.qrId,
+                                filename: `${client.qrId}.png`,
+                                name: client.name,
+                                address: client.address,
+                                businessLocation: client.businessLocation || client.address,
+                                logoUrl: client.logoUrl
+                              })}
+                              title="Click to view & print standee"
+                            />
+                            <code
+                              style={{ fontWeight: 700, color: '#A5B4FC', fontSize: '0.85rem', cursor: 'pointer' }}
+                              onClick={() => setPrintQr({
+                                qrId: client.qrId,
+                                filename: `${client.qrId}.png`,
+                                name: client.name,
+                                address: client.address,
+                                businessLocation: client.businessLocation || client.address,
+                                logoUrl: client.logoUrl
+                              })}
+                              title="Click to view & print standee"
+                            >
+                              {client.qrId}
+                            </code>
+                          </div>
+                        </td>
+
+                        {/* Phone */}
+                        <td>
+                          {client.phone ? (
+                            <CopyablePhone
+                              phone={client.phone}
+                              displayText={formatPhoneNumber(client.phone)}
+                              style={{ fontSize: '0.86rem', fontWeight: 500 }}
+                            />
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)' }}>—</span>
+                          )}
+                        </td>
+
+                        {/* Reviews Count */}
+                        <td>
+                          <span
+                            className={`badge ${client.reviewsCount > 0 ? 'badge-success' : 'badge-muted'}`}
+                            style={{ cursor: onNavigateToClient ? 'pointer' : 'default' }}
+                            onClick={() => onNavigateToClient && onNavigateToClient('customer-data', client.id)}
+                            title="Click to view reviews for this client"
                           >
-                            {client.qrId}
-                          </code>
-                        </div>
-                      </td>
+                            {client.reviewsCount || 0}
+                          </span>
+                        </td>
 
-                      {/* Phone */}
-                      <td>
-                        {client.phone ? (
-                          <CopyablePhone
-                            phone={client.phone}
-                            displayText={formatPhoneNumber(client.phone)}
-                            style={{ fontSize: '0.86rem', fontWeight: 500 }}
-                          />
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>—</span>
-                        )}
-                      </td>
-
-                      {/* Reviews Count */}
-                      <td>
-                        <span
-                          className={`badge ${client.reviewsCount > 0 ? 'badge-success' : 'badge-muted'}`}
-                          style={{ cursor: onNavigateToClient ? 'pointer' : 'default' }}
-                          onClick={() => onNavigateToClient && onNavigateToClient('customer-data', client.id)}
-                          title="Click to view reviews for this client"
-                        >
-                          {client.reviewsCount || 0}
-                        </span>
-                      </td>
-
-                      {/* Actions: View, Customer Data, Edit, Delete */}
-                      <td>
-                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                          {/* View Button */}
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '6px 11px', fontSize: '0.78rem', color: '#38BDF8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                            onClick={() => setViewingClient(client)}
-                            title="View all details & options"
-                            id={`btn-view-client-${client.id}`}
-                          >
-                            <Eye size={13} />
-                            <span>View</span>
-                          </button>
-
-                          {/* Customer Data Quick Action */}
-                          {onNavigateToClient && (
+                        {/* Actions: View, Customer Data, Edit, Delete */}
+                        <td>
+                          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                            {/* View Button */}
                             <button
                               className="btn btn-secondary btn-sm"
-                              style={{ padding: '6px 9px', fontSize: '0.78rem', color: '#34D399', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                              onClick={() => onNavigateToClient('customer-data', client.id)}
-                              title="Directly view customer review data for this client"
-                              id={`btn-customer-data-client-${client.id}`}
+                              style={{ padding: '6px 11px', fontSize: '0.78rem', color: '#38BDF8', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                              onClick={() => setViewingClient(client)}
+                              title="View all details & options"
+                              id={`btn-view-client-${client.id}`}
                             >
-                              <MessageSquareText size={13} />
-                              <span>Reviews</span>
+                              <Eye size={13} />
+                              <span>View</span>
                             </button>
-                          )}
 
-                          {/* Edit Button */}
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '6px 11px', fontSize: '0.78rem', color: '#A5B4FC', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                            onClick={() => setEditingClient(client)}
-                            title="Edit client details"
-                            id={`btn-edit-client-${client.id}`}
-                          >
-                            <Edit2 size={13} />
-                            <span>Edit</span>
-                          </button>
+                            {/* Customer Data Quick Action */}
+                            {onNavigateToClient && (
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                style={{ padding: '6px 9px', fontSize: '0.78rem', color: '#34D399', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                onClick={() => onNavigateToClient('customer-data', client.id)}
+                                title="Directly view customer review data for this client"
+                                id={`btn-customer-data-client-${client.id}`}
+                              >
+                                <MessageSquareText size={13} />
+                                <span>Reviews</span>
+                              </button>
+                            )}
 
-                          {/* Delete Button */}
-                          <button
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '6px 11px', fontSize: '0.78rem', color: '#F87171', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                            onClick={() => {
-                              setDeleteError('');
-                              setDeletingClient(client);
-                            }}
-                            title="Delete this client"
-                            id={`btn-delete-client-${client.id}`}
-                          >
-                            <Trash2 size={13} />
-                            <span>Delete</span>
-                          </button>
+                            {/* Edit Button */}
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '6px 11px', fontSize: '0.78rem', color: '#A5B4FC', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                              onClick={() => setEditingClient(client)}
+                              title="Edit client details"
+                              id={`btn-edit-client-${client.id}`}
+                            >
+                              <Edit2 size={13} />
+                              <span>Edit</span>
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '6px 11px', fontSize: '0.78rem', color: '#F87171', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                              onClick={() => {
+                                setDeleteError('');
+                                setDeletingClient(client);
+                              }}
+                              title="Delete this client"
+                              id={`btn-delete-client-${client.id}`}
+                            >
+                              <Trash2 size={13} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile & Tablet Responsive Card View */}
+            <div className="all-clients-mobile-cards">
+              {filteredClients.map((client) => {
+                const qrUrl = client?.qrDetails?.filePath ? getImageUrl(client.qrDetails.filePath) : getImageUrl(`/uploads/qr-codes/${client.qrId}.png`);
+                return (
+                  <div className="client-mobile-card" key={client.id} id={`client-card-${client.id}`}>
+                    {/* Header Row: Identity & Reviews Pill */}
+                    <div className="client-mobile-header">
+                      <div className="client-mobile-identity">
+                        {client.logoUrl ? (
+                          <div className="client-mobile-logo">
+                            <img
+                              src={getImageUrl(client.logoUrl)}
+                              alt={client.name}
+                            />
+                          </div>
+                        ) : (
+                          <div className="client-mobile-avatar">
+                            {client.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="client-mobile-title-block">
+                          <div className="client-mobile-name" title={client.name}>{client.name}</div>
+                          <div className="client-mobile-subtags">
+                            <span className="badge badge-primary">{client.businessType || 'Partner'}</span>
+                            {client.isPhoneMandatory ? (
+                              <span className="badge badge-mandatory">Phone Mandatory</span>
+                            ) : null}
+                          </div>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+
+                      <div
+                        className={`badge ${client.reviewsCount > 0 ? 'badge-success' : 'badge-muted'} client-mobile-reviews-pill`}
+                        onClick={() => onNavigateToClient && onNavigateToClient('customer-data', client.id)}
+                        title="Click to view reviews for this client"
+                      >
+                        <MessageSquareText size={11} />
+                        <span>{client.reviewsCount || 0}</span>
+                      </div>
+                    </div>
+
+                    {/* Metadata Grid: QR & Phone */}
+                    <div className="client-mobile-meta-grid">
+                      <div
+                        className="client-mobile-meta-item qr-meta"
+                        onClick={() => setPrintQr({
+                          qrId: client.qrId,
+                          filename: `${client.qrId}.png`,
+                          name: client.name,
+                          address: client.address,
+                          businessLocation: client.businessLocation || client.address,
+                          logoUrl: client.logoUrl
+                        })}
+                        title="Click to view & print standee"
+                      >
+                        <img src={qrUrl} alt={client.qrId} className="client-mobile-qr-thumb" />
+                        <div className="client-mobile-meta-text">
+                          <span className="meta-label">QR Standee</span>
+                          <code className="meta-value-code">{client.qrId}</code>
+                        </div>
+                        <Printer size={13} className="meta-action-icon" />
+                      </div>
+
+                      <div className="client-mobile-meta-item phone-meta">
+                        <Phone size={13} className="phone-icon" />
+                        <div className="client-mobile-meta-text">
+                          <span className="meta-label">Phone</span>
+                          {client.phone ? (
+                            <CopyablePhone
+                              phone={client.phone}
+                              displayText={formatPhoneNumber(client.phone)}
+                              style={{ fontSize: '0.78rem', fontWeight: 600 }}
+                            />
+                          ) : (
+                            <span className="meta-muted">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Address Row (if present) */}
+                    {(client.businessLocation || client.address) && (
+                      <div className="client-mobile-address-row">
+                        <MapPin size={12} className="address-icon" />
+                        <span className="address-text">{client.businessLocation || client.address}</span>
+                      </div>
+                    )}
+
+                    {/* Actions Row: View, Reviews, Edit, Delete */}
+                    <div className="client-mobile-actions-row">
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm client-action-btn view-btn"
+                        onClick={() => setViewingClient(client)}
+                        title="View all details & options"
+                        id={`btn-card-view-${client.id}`}
+                      >
+                        <Eye size={12} />
+                        <span>View</span>
+                      </button>
+
+                      {onNavigateToClient && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm client-action-btn reviews-btn"
+                          onClick={() => onNavigateToClient('customer-data', client.id)}
+                          title="Directly view customer review data"
+                          id={`btn-card-reviews-${client.id}`}
+                        >
+                          <MessageSquareText size={12} />
+                          <span>Reviews</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm client-action-btn edit-btn"
+                        onClick={() => setEditingClient(client)}
+                        title="Edit client details"
+                        id={`btn-card-edit-${client.id}`}
+                      >
+                        <Edit2 size={12} />
+                        <span>Edit</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm client-action-btn delete-btn"
+                        onClick={() => {
+                          setDeleteError('');
+                          setDeletingClient(client);
+                        }}
+                        title="Delete this client"
+                        id={`btn-card-delete-${client.id}`}
+                      >
+                        <Trash2 size={12} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -918,7 +1065,7 @@ export default function AllClients({ onTestReview, onGoToOnboarding, onNavigateT
                   <span>Client Portal Login Credentials</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.82rem', marginBottom: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '0.82rem', marginBottom: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Login Username (Phone): </span>
                     <CopyablePhone

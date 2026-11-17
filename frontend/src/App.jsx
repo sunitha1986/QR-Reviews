@@ -27,6 +27,31 @@ import QuickReviewScannerModal from './components/QuickReviewScannerModal';
 import config from './config';
 import { applyColorTheme, getSavedThemeId } from './utils/colorThemes';
 
+// Master list of system reserved paths (never mistaken for customer review business slugs)
+const RESERVED_PATHS = [
+  'login',
+  'admin',
+  'superadmin',
+  'api',
+  'dashboard',
+  'settings',
+  'favicon.ico',
+  'scan',
+  'new-qr',
+  'onboard',
+  'clients',
+  'categories',
+  'analytics',
+  'client-management',
+  'profile',
+  'keywords',
+  'reviews',
+  'customer-data',
+  'customers',
+  'subscriptions',
+  'plans'
+];
+
 // Helper to extract review identifier from URL pathname (supports both /:slug and /review/:slug)
 function extractReviewTarget(path) {
   if (!path) return null;
@@ -36,11 +61,54 @@ function extractReviewTarget(path) {
   }
   const clean = path.replace(/^\/+|\/+$/g, '');
   if (!clean) return null;
-  const reserved = ['login', 'admin', 'superadmin', 'api', 'dashboard', 'settings', 'favicon.ico', 'scan'];
-  if (reserved.includes(clean.toLowerCase())) {
+  if (RESERVED_PATHS.includes(clean.toLowerCase())) {
     return null;
   }
   return decodeURIComponent(clean);
+}
+
+// Map portal tabId to canonical browser URL pathname
+export const TAB_TO_PATH = {
+  'dashboard': '/dashboard',
+  'new-qr': '/new-qr',
+  'onboard': '/onboard',
+  'clients': '/clients',
+  'categories': '/categories',
+  'analytics': '/analytics',
+  'settings': '/settings',
+  'client-management': '/client-management',
+  'subscriptions': '/plans',
+  'profile': '/profile',
+  'keywords': '/keywords',
+  'customer-data': '/reviews',
+  'customers': '/reviews'
+};
+
+// Map URL pathname to internal tabId
+export function getTabFromPath(pathname, role) {
+  if (!pathname) return null;
+  const clean = pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+  if (!clean || clean === 'dashboard') {
+    return role === 'superadmin' ? 'dashboard' : 'profile';
+  }
+  const pathToTabMap = {
+    'dashboard': 'dashboard',
+    'new-qr': 'new-qr',
+    'onboard': 'onboard',
+    'clients': 'clients',
+    'categories': 'categories',
+    'analytics': 'analytics',
+    'settings': 'settings',
+    'client-management': 'client-management',
+    'subscriptions': 'subscriptions',
+    'plans': 'subscriptions',
+    'profile': 'profile',
+    'keywords': 'keywords',
+    'reviews': role === 'admin' ? 'customer-data' : 'clients',
+    'customers': 'customer-data',
+    'customer-data': 'customer-data'
+  };
+  return pathToTabMap[clean] || null;
 }
 
 export default function App() {
@@ -60,7 +128,12 @@ export default function App() {
 
   // Track login view vs landing page when unauthenticated
   const [showLogin, setShowLogin] = useState(() => {
-    return window.location.pathname.toLowerCase() === '/login';
+    const p = window.location.pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+    return p === 'login' || [
+      'dashboard', 'new-qr', 'onboard', 'clients', 'categories',
+      'analytics', 'settings', 'client-management', 'profile',
+      'keywords', 'reviews', 'customer-data', 'plans', 'subscriptions'
+    ].includes(p);
   });
 
   // Track instant standee camera scanner (e.g. /scan)
@@ -130,10 +203,12 @@ export default function App() {
     }
   }, [colorThemeId, theme, activeBusinessId, user?.role]);
 
-  // Active tab inside portal
+  // Active tab inside portal initialized directly from URL pathname
   const [activeTab, setActiveTab] = useState(() => {
     if (!user) return 'dashboard';
-    return user.role === 'superadmin' ? 'dashboard' : 'profile';
+    const tabFromUrl = getTabFromPath(window.location.pathname, user?.role);
+    if (tabFromUrl) return tabFromUrl;
+    return user?.role === 'superadmin' ? 'dashboard' : 'profile';
   });
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -145,23 +220,62 @@ export default function App() {
     setRefreshKey((prev) => prev + 1);
   };
 
+  // Centralized tab and browser address bar navigation handler
+  const handleTabChange = (tabId, replace = false) => {
+    setActiveTab(tabId);
+    setMobileMenuOpen(false);
+
+    if (user) {
+      const targetPath = TAB_TO_PATH[tabId] || `/${tabId}`;
+      if (window.location.pathname.toLowerCase() !== targetPath.toLowerCase()) {
+        if (replace) {
+          window.history.replaceState({ tab: tabId }, '', targetPath);
+        } else {
+          window.history.pushState({ tab: tabId }, '', targetPath);
+        }
+      }
+    }
+  };
+
+  // Synchronize browser address bar URL with active tab on mount
+  useEffect(() => {
+    if (user && !customerReviewQrId && !showLogin && !showQuickScanner) {
+      const currentTabFromUrl = getTabFromPath(window.location.pathname, user.role);
+      const targetPath = TAB_TO_PATH[activeTab] || `/${activeTab}`;
+      if (!currentTabFromUrl || window.location.pathname.toLowerCase() !== targetPath.toLowerCase()) {
+        window.history.replaceState({ tab: activeTab }, '', targetPath);
+      }
+    }
+  }, [user, activeTab]);
+
   // Handle browser back/forward or URL changes
   useEffect(() => {
     const handlePopState = () => {
-      setCustomerReviewQrId(extractReviewTarget(window.location.pathname));
-      setShowLogin(window.location.pathname.toLowerCase() === '/login');
-      setShowQuickScanner(window.location.pathname.toLowerCase() === '/scan');
+      const pathname = window.location.pathname;
+      const reviewTarget = extractReviewTarget(pathname);
+      setCustomerReviewQrId(reviewTarget);
+
+      const clean = pathname.toLowerCase().replace(/^\/+|\/+$/g, '');
+      setShowLogin(clean === 'login');
+      setShowQuickScanner(clean === 'scan');
+
+      if (user && !reviewTarget) {
+        const matchingTab = getTabFromPath(pathname, user.role);
+        if (matchingTab) {
+          setActiveTab(matchingTab);
+        }
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [user]);
 
   // Update active tab when user role changes
   useEffect(() => {
     if (user) {
       if (user.role === 'admin' && !['profile', 'keywords', 'customer-data', 'subscriptions'].includes(activeTab)) {
-        setActiveTab('profile');
+        handleTabChange('profile', true);
       }
     }
   }, [user]);
@@ -179,7 +293,12 @@ export default function App() {
         applyColorTheme(bTheme, bId);
       }
     }
-    setActiveTab(userData.role === 'superadmin' ? 'dashboard' : 'profile');
+    const tabFromUrl = getTabFromPath(window.location.pathname, userData.role);
+    const targetTab = tabFromUrl || (userData.role === 'superadmin' ? 'dashboard' : 'profile');
+    setActiveTab(targetTab);
+    const targetPath = TAB_TO_PATH[targetTab] || (userData.role === 'superadmin' ? '/dashboard' : '/profile');
+    window.history.replaceState({ tab: targetTab }, '', targetPath);
+    setShowLogin(false);
   };
 
   // Logout handler - navigate directly to login screen
@@ -302,10 +421,7 @@ export default function App() {
       <Sidebar
         user={user}
         activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          setMobileMenuOpen(false);
-        }}
+        setActiveTab={handleTabChange}
         onLogout={handleLogout}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
@@ -325,7 +441,7 @@ export default function App() {
           onToggleTheme={handleToggleTheme}
           onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
           onRefresh={handleRefresh}
-          onNavigate={(tab) => setActiveTab(tab)}
+          onNavigate={handleTabChange}
           onOpenQuickScanner={handleOpenQuickScanner}
         />
 
@@ -333,10 +449,7 @@ export default function App() {
         <ResponsiveNav
           user={user}
           activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            setMobileMenuOpen(false);
-          }}
+          setActiveTab={handleTabChange}
         />
 
         <main className="content-body" key={refreshKey}>
@@ -345,7 +458,7 @@ export default function App() {
             <>
               {activeTab === 'dashboard' && (
                 <Dashboard
-                  onNavigate={(tab) => setActiveTab(tab)}
+                  onNavigate={handleTabChange}
                   onTestReview={handleOpenCustomerReview}
                 />
               )}
@@ -356,7 +469,7 @@ export default function App() {
                   onLogout={handleLogout}
                   onGoToOnboarding={(qrId) => {
                     setPreselectedQrForOnboard(qrId);
-                    setActiveTab('onboard');
+                    handleTabChange('onboard');
                   }}
                   onTestReview={handleOpenCustomerReview}
                 />
@@ -373,11 +486,11 @@ export default function App() {
               {activeTab === 'clients' && (
                 <AllClients
                   onTestReview={handleOpenCustomerReview}
-                  onGoToOnboarding={() => setActiveTab('onboard')}
+                  onGoToOnboarding={() => handleTabChange('onboard')}
                   onNavigateToClient={(tab, clientId) => {
                     setSelectedClientForAdminView(clientId);
                     setClientManagementSubTab(tab === 'customer-data' ? 'customer-data' : tab === 'keywords' ? 'keywords' : 'profile');
-                    setActiveTab('client-management');
+                    handleTabChange('client-management');
                   }}
                 />
               )}
@@ -386,7 +499,7 @@ export default function App() {
                 <BusinessCategories
                   onGoToOnboarding={(qrId) => {
                     setPreselectedQrForOnboard(qrId || '');
-                    setActiveTab('onboard');
+                    handleTabChange('onboard');
                   }}
                   onTestReview={handleOpenCustomerReview}
                 />
@@ -394,7 +507,7 @@ export default function App() {
 
               {activeTab === 'analytics' && (
                 <Analytics
-                  onNavigate={(tab) => setActiveTab(tab)}
+                  onNavigate={handleTabChange}
                 />
               )}
 
@@ -415,14 +528,14 @@ export default function App() {
                   onTestReview={handleOpenCustomerReview}
                   initialTab={activeTab === 'customer-data' ? 'customer-data' : activeTab === 'keywords' ? 'keywords' : (clientManagementSubTab || 'profile')}
                   onTabChange={setClientManagementSubTab}
-                  onNavigate={setActiveTab}
+                  onNavigate={handleTabChange}
                 />
               )}
 
               {activeTab === 'subscriptions' && (
                 <Subscriptions
                   user={user}
-                  onNavigate={setActiveTab}
+                  onNavigate={handleTabChange}
                   onUpdatePlan={handleUpdateUserPlan}
                 />
               )}
@@ -436,7 +549,7 @@ export default function App() {
                 <ClientProfile
                   user={user}
                   onTestReview={handleOpenCustomerReview}
-                  onNavigate={setActiveTab}
+                  onNavigate={handleTabChange}
                 />
               )}
 
@@ -457,7 +570,7 @@ export default function App() {
               {activeTab === 'subscriptions' && (
                 <Subscriptions
                   user={user}
-                  onNavigate={setActiveTab}
+                  onNavigate={handleTabChange}
                   onUpdatePlan={handleUpdateUserPlan}
                 />
               )}

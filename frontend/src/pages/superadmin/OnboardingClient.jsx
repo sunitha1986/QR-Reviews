@@ -550,6 +550,17 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [keywords, setKeywords] = useState(Array.isArray(draft?.keywords) ? draft.keywords : []);
   const [keywordInput, setKeywordInput] = useState('');
+  const [unassignedQrs, setUnassignedQrs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [successClient, setSuccessClient] = useState(null);
+  const [error, setError] = useState('');
+  const [printModalData, setPrintModalData] = useState(null);
+  const [copiedCreds, setCopiedCreds] = useState(false);
+  const [copiedItem, setCopiedItem] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [downloadingExternalLogo, setDownloadingExternalLogo] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannedFeedback, setScannedFeedback] = useState(null);
 
   // Auto-update selectedQrId if preselectedQrId prop changes (e.g. from New QR Generation action)
   useEffect(() => {
@@ -714,18 +725,6 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
   const handleRemoveKeyword = (indexToRemove) => {
     setKeywords(prev => prev.filter((_, idx) => idx !== indexToRemove));
   };
-
-  const [unassignedQrs, setUnassignedQrs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [successClient, setSuccessClient] = useState(null);
-  const [error, setError] = useState('');
-  const [printModalData, setPrintModalData] = useState(null);
-  const [copiedCreds, setCopiedCreds] = useState(false);
-  const [copiedItem, setCopiedItem] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [downloadingExternalLogo, setDownloadingExternalLogo] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
-  const [scannedFeedback, setScannedFeedback] = useState(null);
 
   const handleScanQrSuccess = async (scannedId, rawData, meta) => {
     if (!scannedId) return;
@@ -2285,16 +2284,21 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                 </span>
               </div>
 
-              <div style={{
-                padding: '16px',
-                borderRadius: '12px',
-                background: 'var(--bg-main)',
-                border: '1px solid rgba(109, 36, 186, 0.2)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}>
+              <div
+                className="standee-live-card"
+                style={{
+                  padding: '18px 16px 14px',
+                  borderRadius: '16px',
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  color: '#0F172A'
+                }}
+              >
                 {/* Logo or Category Icon Avatar */}
                 <div style={{
                   width: '48px',
@@ -2321,7 +2325,7 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                 <div style={{
                   fontWeight: 800,
                   fontSize: '0.98rem',
-                  color: name ? 'var(--text-primary)' : 'var(--text-muted)',
+                  color: name ? '#0F172A' : '#94A3B8',
                   marginBottom: '2px',
                   maxWidth: '100%',
                   overflow: 'hidden',
@@ -2333,7 +2337,7 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
 
                 {/* Location */}
                 {(businessLocation || address) && (
-                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '6px' }}>
                     <MapPin size={11} style={{ color: 'var(--accent)' }} />
                     <span>{businessLocation || address.split(',')[0]}</span>
                   </div>
@@ -2368,29 +2372,31 @@ export default function OnboardingClient({ preselectedQrId, onOnboardSuccess, on
                 {/* Developed By Vasmi Group Standee Footer */}
                 <div style={{
                   marginTop: '12px',
+                  paddingTop: '8px',
+                  borderTop: '1px solid #E2E8F0',
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '5px',
+                  gap: '6px',
                   fontSize: '0.72rem'
                 }}>
                   <a
                     href="https://vasmigroup.com/"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="vasmi-dev-link"
+                    className="standee-dev-link"
                     style={{ textDecoration: 'none' }}
                     title="Designed and Developed by Vasmi Group - https://vasmigroup.com"
                   >
-                    <span className="vasmi-dev-text" style={{ fontSize: '0.70rem' }}>
+                    <span className="standee-dev-text">
                       Designed and Developed by
                     </span>
-                    <span className="vasmi-logo-wrapper">
+                    <span className="standee-logo-wrapper">
                       <img
                         src={vasmiFullLogo}
                         alt="Vasmi Group - Creating Your Identity"
-                        className="vasmi-full-logo-img"
-                        style={{ height: '14px', width: 'auto' }}
+                        className="standee-full-logo-img"
                       />
                     </span>
                   </a>

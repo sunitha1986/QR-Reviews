@@ -78,12 +78,11 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
           {onOpenQuickScanner && (
             <button
               type="button"
-              className="btn btn-secondary btn-sm header-action-btn"
+              className="btn btn-secondary btn-sm header-action-btn header-scan-btn"
               onClick={onOpenQuickScanner}
               title="Quick QR Standee Scanner (Beep & Instant Review)"
               id="btn-header-quick-scan"
               aria-label="Scan QR Standee"
-              style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
             >
               <ScanLine size={15} style={{ color: '#10B981' }} />
               <span className="desktop-only-inline" style={{ fontSize: '0.78rem' }}>Scan QR</span>
@@ -142,18 +141,18 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             <>
               <button
                 type="button"
-                className="mobile-header-icon-btn"
+                className="mobile-header-icon-btn btn-new-qr-icon"
                 onClick={() => onNavigate('new-qr')}
                 title="Generate QR"
                 aria-label="Generate QR"
                 id="btn-mobile-new-qr"
               >
-                <QrCode size={16} style={{ color: '#8B5CF6' }} />
+                <QrCode size={16} style={{ color: '#A78BFA' }} />
               </button>
 
               <button
                 type="button"
-                className="mobile-header-icon-btn"
+                className="mobile-header-icon-btn btn-onboard-icon"
                 onClick={() => onNavigate('onboard')}
                 title="Onboard Client"
                 aria-label="Onboard Client"
@@ -167,19 +166,19 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
           {onOpenQuickScanner && (
             <button
               type="button"
-              className="mobile-header-icon-btn"
+              className="mobile-header-icon-btn btn-scan-icon"
               onClick={onOpenQuickScanner}
               title="Scan QR Standee"
               aria-label="Scan QR Standee"
               id="btn-mobile-quick-scan"
             >
-              <ScanLine size={16} style={{ color: '#10B981' }} />
+              <ScanLine size={16} style={{ color: '#34D399' }} />
             </button>
           )}
 
           <button
             type="button"
-            className="mobile-header-icon-btn"
+            className="mobile-header-icon-btn btn-refresh-icon"
             onClick={handleRefresh}
             title="Refresh Data"
             disabled={isRefreshing}
@@ -187,23 +186,24 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             id="btn-mobile-refresh"
           >
             <RefreshCw
-              size={17}
+              size={16}
               className={isRefreshing ? 'spin-refresh' : ''}
-              style={{ color: '#8B5CF6' }}
+              style={{ color: '#818CF8' }}
             />
           </button>
 
           <button
             type="button"
-            className="mobile-header-icon-btn"
+            className="mobile-header-icon-btn btn-theme-icon"
             onClick={onToggleTheme}
             title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
             aria-label="Toggle theme"
+            id="btn-mobile-theme-toggle"
           >
             {theme === 'dark' ? (
-              <Sun size={18} className="theme-toggle-icon sun-icon" />
+              <Sun size={17} className="theme-toggle-icon sun-icon" style={{ color: '#F59E0B' }} />
             ) : (
-              <Moon size={18} className="theme-toggle-icon moon-icon" />
+              <Moon size={17} className="theme-toggle-icon moon-icon" style={{ color: '#6366F1' }} />
             )}
           </button>
 
@@ -214,7 +214,7 @@ export default function Header({ user, activeTab, theme, onToggleTheme, onToggle
             title="Open Menu"
             id="btn-mobile-hamburger"
           >
-            <Menu size={22} />
+            <Menu size={20} />
           </button>
         </div>
       </div>

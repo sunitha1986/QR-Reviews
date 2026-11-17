@@ -35,7 +35,7 @@ export default function ResponsiveNav({ user, activeTab, setActiveTab }) {
   const clientTabs = [
     { id: 'profile', label: 'Profile', icon: Building2 },
     { id: 'keywords', label: 'Keywords', icon: MessageSquareText },
-    { id: 'customers', label: 'Reviews', icon: Users },
+    { id: 'customer-data', label: 'Reviews', icon: Users },
     { id: 'subscriptions', label: 'Plans', icon: CreditCard },
     { id: 'settings', label: 'Settings', icon: SettingsIcon }
   ];

@@ -1094,11 +1094,11 @@ export default function NewQrGeneration({ onGoToOnboarding, onTestReview, user, 
                     }}
                   >
                     <div className="mobile-card-qrid" style={{ color: isHighlighted ? '#FFFFFF' : undefined }}>{item.qrId}</div>
-                    <div className="mobile-card-note" style={{ color: isHighlighted ? '#DDD6FE' : undefined }}>
-                      {item.assignedClient?.name
-                        ? item.assignedClient.name
-                        : `Dynamic Standee #${(item.qrId ? item.qrId.replace(/^QR-?0*/i, '') : '') || item.qrId}`}
-                    </div>
+                    {(item.assignedClient?.name || item.note) ? (
+                      <div className="mobile-card-note" style={{ color: isHighlighted ? '#DDD6FE' : undefined }}>
+                        {item.assignedClient?.name || item.note}
+                      </div>
+                    ) : null}
                   </div>
 
                   <span

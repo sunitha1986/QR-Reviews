@@ -21,65 +21,102 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { getImageUrl } from '../config';
-import config from '../config';
+import config, { getImageUrl } from '../config';
 import vasmiFullLogo from '../assets/vasmi_full_logo.png';
-import vasmiIcon from '../assets/vasmi_icon.png';
 
-// Helper to calculate grid columns and rows based on qrsPerPage
-function getGridLayout(qrsPerPage) {
-  const n = parseInt(qrsPerPage, 10) || 1;
-  if (n <= 1) return { cols: 1, rows: 1 };
-  if (n === 2) return { cols: 2, rows: 1 };
-  if (n <= 4) return { cols: 2, rows: 2 };
-  if (n <= 6) return { cols: 2, rows: 3 };
-  if (n <= 8) return { cols: 2, rows: 4 };
-  if (n <= 9) return { cols: 3, rows: 3 };
-  if (n <= 12) return { cols: 3, rows: 4 };
-  if (n <= 16) return { cols: 4, rows: 4 };
-  if (n <= 20) return { cols: 4, rows: 5 };
-  return { cols: 4, rows: Math.ceil(n / 4) };
+// Helper to calculate grid columns and rows based on qrsPerPage and columnsCount
+function getGridLayout(qrsPerPage, columnsCount = 3) {
+  const cols = Math.max(1, Math.min(6, parseInt(columnsCount, 10) || 3));
+  const n = Math.max(1, parseInt(qrsPerPage, 10) || cols);
+  const rows = Math.max(1, Math.ceil(n / cols));
+  return { cols, rows };
 }
 
-// Single Unassigned Standee Card item with prominent STAND-ID
-function UnassignedStandeeItem({ qrItem, qrsPerPage, showCutGuides = true, onToggleSelect = null, isMiniPreview = false }) {
-  const n = parseInt(qrsPerPage, 10) || 1;
+// Single Unassigned Standee Card item: Large QR code + "Scan with Phone Camera" + Vasmi Group footer + QR ID in center
+function UnassignedStandeeItem({ qrItem, qrsPerPage, showCutGuides = true, onToggleSelect = null, isMiniPreview = false, paperSize = 'a4', cols = 3, rows = 2 }) {
+  const numCols = Math.max(1, parseInt(cols, 10) || 3);
+  const numRows = Math.max(1, parseInt(rows, 10) || Math.ceil((parseInt(qrsPerPage, 10) || 1) / numCols));
+  const isA3 = paperSize === 'a3';
   const qrUrl = qrItem.filePath
     ? getImageUrl(qrItem.filePath)
     : getImageUrl(`/uploads/qr-codes/${qrItem.filename || `${qrItem.qrId}.png`}`);
 
-  const is1 = n === 1;
-  const is2 = n === 2;
-  const is4 = n >= 3 && n <= 4;
-  const is6 = n >= 5 && n <= 6;
-  const is8 = n >= 7 && n <= 8;
-  const is12 = n >= 9;
+  const is1 = numCols === 1 && numRows === 1;
 
-  const cardPadding = is1
-    ? (isMiniPreview ? '14px 12px' : '20px 18px')
-    : is2
-      ? (isMiniPreview ? '10px 8px' : '14px 12px')
-      : is4
-        ? (isMiniPreview ? '8px 6px' : '10px 8px')
-        : is6
-          ? (isMiniPreview ? '6px 4px' : '8px 6px')
-          : (isMiniPreview ? '4px 3px' : '6px 4px');
+  // Snug padding cutting off all excess dead space around the card
+  const cardPadding = isMiniPreview
+    ? (numRows >= 5 ? '2px 2px' : numRows >= 4 ? '2.5px 2px' : '4px 3px')
+    : isA3
+      ? (numCols === 1
+        ? '14px 10px'
+        : numCols === 2
+          ? '10px 8px'
+          : numCols === 3
+            ? (numRows >= 4 ? '5px 4px' : '7px 5px')
+            : (numRows >= 4 ? '5px 4px' : '6px 4px'))
+      : (numCols === 1
+        ? '10px 8px'
+        : numCols === 2
+          ? '8px 6px'
+          : numCols === 3
+            ? '4px 3px'
+            : '3px 2px');
 
-  const qrSize = is1
-    ? (isMiniPreview ? 140 : 210)
-    : is2
-      ? (isMiniPreview ? 110 : 155)
-      : is4
-        ? (isMiniPreview ? 80 : 115)
-        : is6
-          ? (isMiniPreview ? 65 : 92)
-          : is8
-            ? (isMiniPreview ? 55 : 76)
-            : (isMiniPreview ? 46 : 64);
+  // Dynamic QR Code size in pixels:
+  const qrSize = isA3
+    ? numCols === 1
+      ? (isMiniPreview ? 180 : (numRows === 1 ? 620 : 440))
+      : numCols === 2
+        ? (isMiniPreview ? (numRows <= 2 ? 120 : 85) : (numRows <= 2 ? 380 : 270))
+        : numCols === 3
+          ? (isMiniPreview ? (numRows <= 2 ? 80 : numRows === 3 ? 60 : 45) : (numRows <= 2 ? 300 : numRows === 3 ? 240 : 180))
+          : (isMiniPreview ? (numRows <= 2 ? 65 : numRows <= 4 ? 64 : 40) : (numRows <= 2 ? 220 : numRows <= 4 ? 185 : 150))
+    : numCols === 1
+      ? (isMiniPreview ? 160 : (numRows === 1 ? 430 : 300))
+      : numCols === 2
+        ? (isMiniPreview ? (numRows <= 2 ? 95 : 70) : (numRows <= 2 ? 250 : 180))
+        : numCols === 3
+          ? (isMiniPreview ? (numRows <= 2 ? 70 : numRows === 3 ? 52 : 38) : (numRows <= 2 ? 205 : numRows === 3 ? 165 : 120))
+          : (isMiniPreview ? (numRows <= 2 ? 50 : 34) : (numRows <= 2 ? 140 : 95));
 
-  const titleFontSize = is1 ? '1.25rem' : is2 ? '1.05rem' : is4 ? '0.88rem' : is6 ? '0.78rem' : '0.70rem';
-  const standIdFontSize = is1 ? '1.15rem' : is2 ? '1.02rem' : is4 ? '0.88rem' : is6 ? '0.78rem' : '0.70rem';
-  const ctaFontSize = is1 ? '0.94rem' : is2 ? '0.82rem' : is4 ? '0.74rem' : is6 ? '0.68rem' : '0.60rem';
+  const ctaFontSize = isMiniPreview
+    ? (numRows >= 5 ? '0.42rem' : numRows >= 4 ? '0.48rem' : numRows === 3 ? '0.56rem' : '0.66rem')
+    : isA3
+      ? numCols === 1
+        ? (numRows === 1 ? '1.50rem' : '1.25rem')
+        : numCols === 2
+          ? '1.15rem'
+          : numCols === 3
+            ? (numRows >= 4 ? '0.86rem' : '0.92rem')
+            : (numRows >= 4 ? '0.82rem' : '0.86rem')
+      : numCols === 1
+        ? (numRows === 1 ? '1.10rem' : '0.95rem')
+        : numCols === 2
+          ? '0.88rem'
+          : numCols === 3
+            ? '0.72rem'
+            : '0.62rem';
+
+  // Small, compact font for footer so it takes minimal space
+  const devTextFontSize = isMiniPreview
+    ? (numRows >= 5 ? '0.22rem' : numRows >= 4 ? '0.25rem' : numRows === 3 ? '0.28rem' : '0.32rem')
+    : isA3
+      ? (numCols === 1 ? '0.52rem' : numCols === 2 ? '0.44rem' : numCols === 3 ? '0.38rem' : (numRows >= 4 ? '0.34rem' : '0.36rem'))
+      : (numCols === 1 ? '0.44rem' : numCols === 2 ? '0.38rem' : numCols === 3 ? '0.34rem' : '0.28rem');
+
+  // Vasmi logo size
+  const logoHeight = isMiniPreview
+    ? (numRows >= 5 ? '7px' : numRows >= 4 ? '8.5px' : numRows === 3 ? '10px' : '12px')
+    : isA3
+      ? (numCols === 1 ? '34px' : numCols === 2 ? '28px' : numCols === 3 ? '22px' : (numRows >= 4 ? '18px' : '20px'))
+      : (numCols === 1 ? '26px' : numCols === 2 ? '22px' : numCols === 3 ? '17px' : '14px');
+
+  // Reduced QR ID font size
+  const qrIdFontSize = isMiniPreview
+    ? (numRows >= 5 ? '0.24rem' : numRows >= 4 ? '0.26rem' : numRows === 3 ? '0.30rem' : '0.34rem')
+    : isA3
+      ? (numCols === 1 ? '0.52rem' : numCols === 2 ? '0.44rem' : numCols === 3 ? '0.38rem' : (numRows >= 4 ? '0.36rem' : '0.38rem'))
+      : (numCols === 1 ? '0.44rem' : numCols === 2 ? '0.38rem' : numCols === 3 ? '0.34rem' : '0.28rem');
 
   return (
     <div
@@ -87,10 +124,10 @@ function UnassignedStandeeItem({ qrItem, qrsPerPage, showCutGuides = true, onTog
       style={{
         background: '#FFFFFF',
         color: '#0F172A',
-        borderRadius: showCutGuides ? '6px' : '10px',
+        borderRadius: showCutGuides ? '4px' : '8px',
         padding: cardPadding,
         textAlign: 'center',
-        border: showCutGuides ? '1.5px dashed #94A3B8' : '1.5px solid #CBD5E1',
+        border: showCutGuides ? '1.5px dashed #CBD5E1' : '1px solid #E2E8F0',
         boxSizing: 'border-box',
         position: 'relative',
         display: 'flex',
@@ -141,83 +178,75 @@ function UnassignedStandeeItem({ qrItem, qrsPerPage, showCutGuides = true, onTog
             top: '4px',
             left: '4px',
             opacity: 0.45,
-            color: '#64748B'
+            color: '#64748B',
+            zIndex: 2
           }}
         >
           <Scissors size={10} />
         </div>
       )}
 
-      {/* Top Header */}
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* 1. Scan Call to Action - moved slightly down with balanced top spacing */}
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          marginTop: isMiniPreview
+            ? (numRows >= 5 ? '2.5px' : '5px')
+            : is1
+              ? '10px'
+              : (isA3 ? (numRows >= 4 ? '8px' : '12px') : (numRows >= 4 ? '5px' : '8px')),
+          marginBottom: isMiniPreview
+            ? (numRows >= 5 ? '1px' : '2px')
+            : is1
+              ? '8px'
+              : (numCols <= 2 && numRows <= 2)
+                ? '4px'
+                : '2px',
+          flexShrink: 0
+        }}
+      >
         <div
           style={{
-            fontSize: is1 ? '0.84rem' : is4 ? '0.68rem' : '0.62rem',
-            fontWeight: 800,
-            color: '#4338CA',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginBottom: '1px'
-          }}
-        >
-          Review Us on Google
-        </div>
-
-        <div
-          style={{
-            fontSize: titleFontSize,
+            fontSize: ctaFontSize,
             fontWeight: 800,
             color: '#0F172A',
             lineHeight: 1.15,
-            marginBottom: '2px'
+            textAlign: 'center',
+            letterSpacing: '-0.01em'
           }}
         >
-          Dynamic Review Standee
-        </div>
-
-        {/* PROMINENT STAND-ID BADGE */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            background: '#F1F5F9',
-            border: '1.5px solid #0F172A',
-            borderRadius: '4px',
-            padding: is1 ? '3px 12px' : is4 ? '2px 8px' : '1px 6px',
-            margin: '2px auto 4px auto',
-            fontWeight: 900,
-            fontSize: standIdFontSize,
-            color: '#0F172A',
-            letterSpacing: '0.04em',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-          }}
-        >
-          <span style={{ fontSize: is1 ? '0.70rem' : '0.60rem', color: '#64748B', fontWeight: 700 }}>STAND-ID:</span>
-          <span>{qrItem.qrId}</span>
+          Scan with Phone Camera
         </div>
       </div>
 
-      {/* QR Code Frame */}
+      {/* 2. Main QR Code Container - tight fit, zero dead space */}
       <div
         style={{
-          background: '#FFFFFF',
-          padding: is1 ? '8px' : is4 ? '5px' : '3px',
-          border: '1.5px solid #E2E8F0',
-          borderRadius: '8px',
-          display: 'inline-flex',
+          flex: 1,
+          width: '100%',
+          display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          margin: '2px auto',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.04)'
+          position: 'relative',
+          padding: '0',
+          margin: '0',
+          minHeight: isMiniPreview
+            ? (numRows >= 5 ? '32px' : numRows >= 4 ? '52px' : '65px')
+            : (isA3 ? (numRows >= 4 ? '170px' : '220px') : (numRows >= 4 ? '110px' : '150px'))
         }}
       >
         <img
           src={qrUrl}
           alt={`QR ${qrItem.qrId}`}
+          crossOrigin="anonymous"
           style={{
-            width: `${qrSize}px`,
-            height: `${qrSize}px`,
+            width: '100%',
+            height: '100%',
+            maxWidth: `${qrSize}px`,
+            maxHeight: `${qrSize}px`,
             display: 'block',
             objectFit: 'contain'
           }}
@@ -228,52 +257,55 @@ function UnassignedStandeeItem({ qrItem, qrsPerPage, showCutGuides = true, onTog
         />
       </div>
 
-      {/* Scan Call to Action */}
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <div
-          style={{
-            fontSize: ctaFontSize,
-            fontWeight: 800,
-            color: '#0F172A',
-            marginTop: '2px',
-            lineHeight: 1.15
-          }}
-        >
-          Scan with Phone Camera
-        </div>
-        {!is8 && !is12 && (
-          <div
-            style={{
-              fontSize: '0.62rem',
-              color: '#64748B',
-              marginTop: '1px'
-            }}
-          >
-            No app required • Instant review
-          </div>
-        )}
-      </div>
-
-      {/* Vasmi Group Standee Footer */}
+      {/* QR ID - centered in same line */}
       <div
         style={{
           width: '100%',
-          marginTop: is1 ? '8px' : '4px',
-          paddingTop: is1 ? '5px' : '3px',
-          borderTop: '1px solid #E2E8F0',
           display: 'flex',
-          alignItems: 'center',
           justifyContent: 'center',
-          gap: '5px',
-          flexWrap: 'nowrap'
+          alignItems: 'center',
+          marginTop: '1px',
+          marginBottom: '2px',
+          flexShrink: 0
         }}
       >
         <span
           style={{
-            fontSize: is12 ? '0.54rem' : is8 ? '0.58rem' : is4 ? '0.62rem' : '0.66rem',
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            fontSize: qrIdFontSize,
             color: '#64748B',
-            fontWeight: 500,
-            whiteSpace: 'nowrap'
+            letterSpacing: '0.04em',
+            lineHeight: 1,
+            textAlign: 'center'
+          }}
+        >
+          {qrItem.qrId}
+        </span>
+      </div>
+
+      {/* Vasmi Group Standee Footer - 2 LINES STACKED (saves horizontal space) */}
+      <div
+        style={{
+          width: '100%',
+          paddingTop: '2px',
+          borderTop: '1px solid #E2E8F0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '1px',
+          flexShrink: 0
+        }}
+      >
+        <span
+          style={{
+            fontSize: devTextFontSize,
+            color: '#64748B',
+            fontWeight: 600,
+            whiteSpace: 'nowrap',
+            lineHeight: 1.1,
+            letterSpacing: '0.02em'
           }}
         >
           Designed and Developed by
@@ -283,8 +315,9 @@ function UnassignedStandeeItem({ qrItem, qrsPerPage, showCutGuides = true, onTog
             src={vasmiFullLogo}
             alt="Vasmi Group - Creating Your Identity"
             className="vasmi-full-logo-img"
+            crossOrigin="anonymous"
             style={{
-              height: is12 ? '10px' : is8 ? '11px' : is4 ? '13px' : '15px',
+              height: logoHeight,
               width: 'auto',
               display: 'inline-block',
               objectFit: 'contain'
@@ -300,13 +333,23 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
   const [unassignedList, setUnassignedList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [search, setSearch] = useState('');
-  // QRs per A4 sheet setting: default 4
-  const [qrsPerPage, setQrsPerPage] = useState(4);
+  // Paper sheet format: 'a3' (11.7 x 16.5 inches) or 'a4' (8.3 x 11.7 inches)
+  const [paperSize, setPaperSize] = useState('a3');
+  // Column customization: default 3 columns (1, 2, 3, 4)
+  const [columnsCount, setColumnsCount] = useState(3);
+  // Rows per page customization: default 2 rows (1, 2, 3, 4, 5, 6)
+  const [rowsCount, setRowsCount] = useState(2);
   const [showCutGuides, setShowCutGuides] = useState(true);
   const [copiedAll, setCopiedAll] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [activePreviewPage, setActivePreviewPage] = useState(1);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+  // Copies of each QR (default 1)
+  const [copiesPerQr, setCopiesPerQr] = useState(1);
+  // Custom overrides per individual QR ID: { [qrId]: number }
+  const [customCopies, setCustomCopies] = useState({});
+  // Toggle per-QR copies drawer
+  const [showCopiesList, setShowCopiesList] = useState(false);
 
   // Fetch or filter latest unassigned QRs on open
   useEffect(() => {
@@ -340,27 +383,26 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
 
   if (!isOpen) return null;
 
-  // Presets for QRs per page
-  const presets = [
-    { count: 1, label: '1 / Page', desc: 'Full A4 Standee' },
-    { count: 2, label: '2 / Page', desc: 'Half A4 Cards' },
-    { count: 4, label: '4 / Page', desc: 'Quarter / A6 Cards (Recommended)' },
-    { count: 6, label: '6 / Page', desc: '2×3 Table Cards' },
-    { count: 8, label: '8 / Page', desc: '2×4 Mini Cards' },
-    { count: 12, label: '12 / Page', desc: '3×4 Sticker Labels' }
-  ];
-
-  // Filtered by search keyword
-  const filteredQrs = unassignedList.filter(q => {
-    if (!search.trim()) return true;
-    const term = search.toLowerCase();
-    const qrId = (q.qrId || '').toLowerCase();
-    const seq = String(q.sequence || '').toLowerCase();
-    const note = (q.note || '').toLowerCase();
-    return qrId.includes(term) || seq.includes(term) || note.includes(term);
-  });
-
   const selectedQrs = unassignedList.filter(q => selectedIds.includes(q.qrId));
+
+  const getCopiesForQr = (qrId) => {
+    return customCopies[qrId] !== undefined ? customCopies[qrId] : copiesPerQr;
+  };
+
+  const handleSetGlobalCopies = (val) => {
+    const num = Math.max(1, Math.min(50, val));
+    setCopiesPerQr(num);
+    setCustomCopies({});
+    showToast(`Set all QRs to ${num} ${num === 1 ? 'copy' : 'copies'} each`);
+  };
+
+  const handleSetSingleQrCopies = (qrId, val) => {
+    const num = Math.max(1, Math.min(50, val));
+    setCustomCopies(prev => ({
+      ...prev,
+      [qrId]: num
+    }));
+  };
 
   // Toggle single item selection
   const handleToggleSelect = (qrId) => {
@@ -371,18 +413,11 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
 
   // Select all / Deselect all
   const handleSelectAll = () => {
-    if (selectedIds.length === filteredQrs.length && filteredQrs.length > 0) {
+    if (selectedIds.length === unassignedList.length && unassignedList.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredQrs.map(q => q.qrId));
+      setSelectedIds(unassignedList.map(q => q.qrId));
     }
-  };
-
-  // Quick select top N
-  const handleSelectTopN = (n) => {
-    const top = unassignedList.slice(0, n).map(q => q.qrId);
-    setSelectedIds(top);
-    showToast(`Selected top ${top.length} unassigned QRs`);
   };
 
   const showToast = (msg) => {
@@ -428,16 +463,226 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
   };
 
   const handlePrint = () => {
+    const styleEl = document.createElement('style');
+    styleEl.id = 'dynamic-print-paper-size';
+    styleEl.innerHTML = `@page { size: ${paperSize.toUpperCase()} portrait; margin: ${paperSize === 'a3' ? '5mm' : '5mm'}; }`;
+    document.head.appendChild(styleEl);
     window.print();
+    setTimeout(() => {
+      if (styleEl && styleEl.parentNode) {
+        styleEl.parentNode.removeChild(styleEl);
+      }
+    }, 1500);
   };
 
-  const parsedQrsPerPage = Math.max(1, Math.min(24, parseInt(qrsPerPage, 10) || 1));
-  const { cols, rows } = getGridLayout(parsedQrsPerPage);
+  // Helper to convert any image URL to a base64 Data URL (prevents CORS & canvas export issues)
+  const toDataUrl = async (url) => {
+    if (!url) return '';
+    if (url.startsWith('data:')) return url;
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) throw new Error('Fetch failed');
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth || 300;
+            c.height = img.naturalHeight || 300;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(c.toDataURL('image/png'));
+          } catch {
+            resolve(url);
+          }
+        };
+        img.onerror = () => resolve(url);
+        img.src = url;
+      });
+    }
+  };
 
-  // Group selected QRs into pages of parsedQrsPerPage
+  // Programmatically generate and download high-resolution multi-page PDF
+  const handleGeneratePdf = async () => {
+    if (selectedQrs.length === 0 || generatingPdf) return;
+    setGeneratingPdf(true);
+    showToast(`Preparing high-resolution ${paperSize.toUpperCase()} PDF...`);
+
+    let renderHost = null;
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      // 1. Preload / convert all QR code images and the Vasmi logo to Base64 data URLs
+      showToast('Loading images for PDF...');
+      const dataUrlMap = {};
+      const logoDataUrl = await toDataUrl(vasmiFullLogo);
+
+      await Promise.all(
+        selectedQrs.map(async (qr) => {
+          const qrUrl = qr.filePath
+            ? getImageUrl(qr.filePath)
+            : getImageUrl(`/uploads/qr-codes/${qr.filename || `${qr.qrId}.png`}`);
+          const b64 = await toDataUrl(qrUrl);
+          dataUrlMap[qrUrl] = b64;
+          dataUrlMap[qr.qrId] = b64;
+        })
+      );
+
+      // 2. Query the pages from the printable container
+      const container = document.getElementById('printable-batch-container');
+      if (!container) throw new Error('Print container not found');
+
+      const isA3 = paperSize === 'a3';
+      const pageElements = container.querySelectorAll(isA3 ? '.a3-print-page' : '.a4-print-page');
+      if (pageElements.length === 0) throw new Error('No print pages found');
+
+      const pageWidthMm = isA3 ? 297 : 210;
+      const pageHeightMm = isA3 ? 420 : 297;
+      const pageWidthPx = isA3 ? 1123 : 794;
+      const pageHeightPx = isA3 ? 1587 : 1123;
+
+      // 3. Create a dedicated rendering host inside the viewport behind the modal overlay (z-index 1240 < modal 1250)
+      renderHost = document.createElement('div');
+      renderHost.id = 'pdf-render-host';
+      renderHost.style.position = 'fixed';
+      renderHost.style.left = '0';
+      renderHost.style.top = '0';
+      renderHost.style.width = `${pageWidthPx}px`;
+      renderHost.style.height = `${pageHeightPx}px`;
+      renderHost.style.minHeight = `${pageHeightPx}px`;
+      renderHost.style.zIndex = '1240';
+      renderHost.style.background = '#FFFFFF';
+      renderHost.style.overflow = 'hidden';
+      renderHost.style.pointerEvents = 'none';
+      renderHost.style.boxSizing = 'border-box';
+      document.body.appendChild(renderHost);
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: isA3 ? 'a3' : 'a4',
+        compress: true
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        showToast(`Rendering Sheet ${i + 1} of ${pageElements.length}...`);
+        const pageEl = pageElements[i];
+        const pageClone = pageEl.cloneNode(true);
+
+        // Ensure clone has standard layout styles
+        pageClone.style.display = 'grid';
+        pageClone.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        pageClone.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+        pageClone.style.width = `${pageWidthPx}px`;
+        pageClone.style.height = `${pageHeightPx}px`;
+        pageClone.style.minHeight = `${pageHeightPx}px`;
+        pageClone.style.boxSizing = 'border-box';
+        pageClone.style.background = '#FFFFFF';
+        pageClone.style.padding = isA3 ? (rows >= 4 ? '5mm' : '8mm') : (rows >= 4 ? '4mm' : '6mm');
+        pageClone.style.gap = isA3 ? (rows >= 4 ? '3.5mm' : '6mm') : (rows >= 4 ? '3mm' : '5mm');
+        pageClone.style.margin = '0 auto';
+        pageClone.style.visibility = 'visible';
+
+        // Swap images to base64 data URLs
+        const imgs = pageClone.querySelectorAll('img');
+        imgs.forEach((img) => {
+          img.crossOrigin = 'anonymous';
+          const src = img.src || img.getAttribute('src');
+          if (img.classList.contains('vasmi-full-logo-img') && logoDataUrl) {
+            img.src = logoDataUrl;
+          } else if (dataUrlMap[src]) {
+            img.src = dataUrlMap[src];
+          }
+        });
+
+        renderHost.innerHTML = '';
+        renderHost.appendChild(pageClone);
+
+        // Wait for all images inside to be fully ready
+        const allImgs = Array.from(pageClone.querySelectorAll('img'));
+        await Promise.all(
+          allImgs.map((img) => {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            return new Promise((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              setTimeout(resolve, 400);
+            });
+          })
+        );
+
+        // Small tick for CSS/layout calculation
+        await new Promise((r) => setTimeout(r, 60));
+
+        const canvas = await html2canvas(pageClone, {
+          scale: isA3 ? 1.6 : 2, // High resolution canvas capture
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#FFFFFF',
+          width: pageWidthPx,
+          height: pageHeightPx,
+          windowWidth: pageWidthPx,
+          windowHeight: pageHeightPx,
+          x: 0,
+          y: 0,
+          scrollX: 0,
+          scrollY: 0,
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        if (i > 0) pdf.addPage(isA3 ? 'a3' : 'a4', 'portrait');
+        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMm, pageHeightMm, undefined, 'FAST');
+      }
+
+      const fileName = `unassigned_standees_${paperSize.toUpperCase()}_${totalStandees}standees_${new Date().toISOString().slice(0, 10)}.pdf`;
+      pdf.save(fileName);
+      showToast(`${paperSize.toUpperCase()} PDF downloaded successfully!`);
+    } catch (err) {
+      console.error('PDF Generation failed, opening print dialog:', err);
+      showToast('PDF generation issue, opening print dialog...');
+      window.print();
+    } finally {
+      if (renderHost && renderHost.parentNode) {
+        renderHost.parentNode.removeChild(renderHost);
+      }
+      setGeneratingPdf(false);
+    }
+  };
+
+  const cols = Math.max(1, Math.min(6, parseInt(columnsCount, 10) || 3));
+  const rows = Math.max(1, Math.min(6, parseInt(rowsCount, 10) || 2));
+  const parsedQrsPerPage = cols * rows;
+  const qrsPerPage = parsedQrsPerPage;
+
+  // Expand selected QRs by their individual copy counts:
+  const expandedQrs = [];
+  selectedQrs.forEach((qr) => {
+    const copies = getCopiesForQr(qr.qrId);
+    for (let c = 0; c < copies; c++) {
+      expandedQrs.push({
+        ...qr,
+        _copyIndex: c + 1,
+        _totalCopies: copies
+      });
+    }
+  });
+  const totalStandees = expandedQrs.length;
+
+  // Group expanded QRs into pages of parsedQrsPerPage
   const pages = [];
-  for (let i = 0; i < selectedQrs.length; i += parsedQrsPerPage) {
-    pages.push(selectedQrs.slice(i, i + parsedQrsPerPage));
+  for (let i = 0; i < expandedQrs.length; i += parsedQrsPerPage) {
+    pages.push(expandedQrs.slice(i, i + parsedQrsPerPage));
   }
   const totalSheets = Math.max(1, pages.length);
 
@@ -447,25 +692,25 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '960px',
+          maxWidth: '740px',
           width: '95%',
-          maxHeight: '94vh',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
-          padding: '20px',
+          padding: '14px 18px',
           background: 'var(--card-bg, #0F172A)',
-          borderRadius: '16px',
+          borderRadius: '14px',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.75)',
           overflow: 'hidden'
         }}
       >
         {/* Header Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
               background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(5, 150, 105, 0.2))',
               color: '#10B981',
               display: 'flex',
@@ -473,15 +718,15 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
               justifyContent: 'center',
               border: '1px solid rgba(16, 185, 129, 0.35)'
             }}>
-              <Printer size={18} />
+              <Printer size={16} />
             </div>
             <div>
-              <h3 style={{ fontSize: '1.18rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
-                Pull & Print Unassigned QR Standees
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                Batch Print QR Standees
               </h3>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
-                Print physical empty standees & stickers with labeled IDs to hand out to clients during onboarding
-              </p>
+              <div style={{ fontSize: '0.70rem', color: 'var(--text-muted)' }}>
+                Print dynamic unassigned standees on A3 / A4 sheets
+              </div>
             </div>
           </div>
 
@@ -489,230 +734,348 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
             type="button"
             className="btn btn-secondary btn-sm"
             onClick={onClose}
-            style={{ borderRadius: '50%', padding: '6px', width: '32px', height: '32px' }}
+            style={{ borderRadius: '50%', padding: '4px', width: '28px', height: '28px' }}
             title="Close"
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
-        {/* SETTINGS CONTROLS PANEL: QRs per A4 Sheet Setting */}
+        {/* COMPACT SETTINGS: Sheet Mode (A3/A4) + Columns Dropdown + Rows Dropdown + Cumulative Count + Cut Guidelines */}
         <div
           className="no-print"
           style={{
             background: 'rgba(255, 255, 255, 0.03)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '12px',
-            padding: '12px 14px',
-            marginBottom: '12px',
+            borderRadius: '10px',
+            padding: '8px 12px',
+            marginBottom: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
             flexShrink: 0
           }}
         >
-          {/* Row 1: Setting Label & Presets */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Grid size={15} style={{ color: '#10B981' }} />
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                QRs per A4 Sheet Setting:
-              </span>
+          {/* Dropdown controls with explicit labels (No pill style) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* 1. Sheet Mode: A3 / A4 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <label
+                htmlFor="sheet-mode-select"
+                style={{
+                  fontSize: '0.67rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}
+              >
+                Sheet Mode
+              </label>
+              <select
+                id="sheet-mode-select"
+                value={paperSize}
+                onChange={(e) => setPaperSize(e.target.value)}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.9)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.18)',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="a3">A3 Sheet (297 × 420 mm)</option>
+                <option value="a4">A4 Sheet (210 × 297 mm)</option>
+              </select>
             </div>
 
-            {/* Quick Presets */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
-              {presets.map((p) => {
-                const isSelected = parsedQrsPerPage === p.count;
-                return (
-                  <button
-                    key={p.count}
-                    type="button"
-                    onClick={() => {
-                      setQrsPerPage(p.count);
-                      setShowCutGuides(p.count > 1);
-                    }}
-                    className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{
-                      fontSize: '0.74rem',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      fontWeight: isSelected ? 700 : 500
-                    }}
-                    title={p.desc}
-                  >
-                    {p.label}
-                  </button>
-                );
-              })}
+            {/* 2. Columns Dropdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <label
+                htmlFor="columns-select"
+                style={{
+                  fontSize: '0.67rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}
+              >
+                Columns
+              </label>
+              <select
+                id="columns-select"
+                value={columnsCount}
+                onChange={(e) => setColumnsCount(parseInt(e.target.value, 10))}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.9)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.18)',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="1">1 Column</option>
+                <option value="2">2 Columns</option>
+                <option value="3">3 Columns (Default)</option>
+                <option value="4">4 Columns</option>
+              </select>
+            </div>
+
+            {/* 3. Rows per Page Dropdown */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <label
+                htmlFor="rows-select"
+                style={{
+                  fontSize: '0.67rem',
+                  fontWeight: 700,
+                  color: 'var(--text-secondary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}
+              >
+                Rows / Page
+              </label>
+              <select
+                id="rows-select"
+                value={rowsCount}
+                onChange={(e) => setRowsCount(parseInt(e.target.value, 10))}
+                style={{
+                  background: 'rgba(15, 23, 42, 0.9)',
+                  color: '#FFFFFF',
+                  border: '1px solid rgba(255, 255, 255, 0.18)',
+                  borderRadius: '6px',
+                  padding: '4px 8px',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="1">1 Row</option>
+                <option value="2">2 Rows (Default)</option>
+                <option value="3">3 Rows</option>
+                <option value="4">4 Rows</option>
+                <option value="5">5 Rows</option>
+                <option value="6">6 Rows</option>
+              </select>
+            </div>
+
+            {/* 4. Cumulative Calculation Badge */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(16, 185, 129, 0.12)',
+                border: '1px solid rgba(16, 185, 129, 0.35)',
+                borderRadius: '7px',
+                padding: '5px 12px',
+                marginTop: '13px'
+              }}
+            >
+              <Grid size={13} style={{ color: '#10B981' }} />
+              <div style={{ fontSize: '0.74rem', color: '#E2E8F0', fontWeight: 600 }}>
+                <strong style={{ color: '#10B981', fontSize: '0.80rem' }}>{parsedQrsPerPage} QRs / Sheet</strong>
+                {' '}<span style={{ opacity: 0.65 }}>({cols} cols × {rows} rows)</span>
+                <span style={{ margin: '0 6px', opacity: 0.3 }}>|</span>
+                Cumulative: <strong style={{ color: '#10B981' }}>{totalSheets}</strong> {paperSize.toUpperCase()} Sheet{totalSheets > 1 ? 's' : ''}
+                {' '}<span style={{ opacity: 0.65 }}>({totalStandees} total standees)</span>
+              </div>
             </div>
           </div>
 
-          {/* Row 2: Custom Number Input & Options */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-              {/* Custom Input */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <label style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>Exact QRs / Sheet:</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="24"
-                  value={qrsPerPage}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    setQrsPerPage(isNaN(val) ? '' : Math.max(1, Math.min(24, val)));
-                  }}
-                  style={{
-                    width: '54px',
-                    height: '26px',
-                    textAlign: 'center',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    borderRadius: '6px',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    background: 'rgba(0, 0, 0, 0.25)',
-                    color: 'var(--text-primary)'
-                  }}
-                />
-              </div>
-
-              {/* Cut Guidelines Checkbox */}
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  fontSize: '0.76rem',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  userSelect: 'none'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={showCutGuides}
-                  onChange={(e) => setShowCutGuides(e.target.checked)}
-                  style={{ accentColor: '#10B981' }}
-                />
-                <span>Cut Guidelines (dashed scissors border)</span>
-              </label>
-            </div>
-
-            {/* Total Sheets Badge */}
-            <div
+          {/* Right: Cut Guidelines Toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '13px' }}>
+            <label
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
-                fontSize: '0.76rem',
-                background: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                padding: '3px 10px',
-                borderRadius: '6px',
-                color: '#10B981',
-                fontWeight: 700
+                fontSize: '0.74rem',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                userSelect: 'none'
               }}
             >
-              <Sparkles size={12} />
-              <span>
-                {selectedQrs.length} QRs will print across {pages.length} A4 Sheet{pages.length > 1 ? 's' : ''} ({parsedQrsPerPage} per page)
-              </span>
-            </div>
+              <input
+                type="checkbox"
+                checked={showCutGuides}
+                onChange={(e) => setShowCutGuides(e.target.checked)}
+                style={{ accentColor: '#10B981' }}
+              />
+              <span>Cut Guidelines</span>
+            </label>
           </div>
         </div>
 
-        {/* TOOLBAR: Selection controls, Search, Copy IDs, CSV */}
+        {/* COMPACT TOOLBAR: Select All + Copies per QR + Copy IDs + CSV */}
         <div
           className="no-print"
           style={{
             display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '8px 12px',
+            padding: '5px 10px',
             background: 'rgba(255, 255, 255, 0.02)',
             border: '1px solid rgba(255, 255, 255, 0.06)',
-            borderRadius: '10px',
-            marginBottom: '10px',
+            borderRadius: '8px',
+            marginBottom: '6px',
+            flexWrap: 'wrap',
+            gap: '6px',
             flexShrink: 0
           }}
         >
-          {/* Quick Select & Search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={handleSelectAll}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.74rem', padding: '3px 8px' }}
-            >
-              {selectedIds.length === filteredQrs.length && filteredQrs.length > 0 ? (
-                <>
-                  <CheckSquare size={12} style={{ color: '#10B981' }} />
-                  <span>Deselect All</span>
-                </>
-              ) : (
-                <>
-                  <Square size={12} />
-                  <span>Select All ({filteredQrs.length})</span>
-                </>
-              )}
-            </button>
+          {/* Select All */}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={handleSelectAll}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '2px 8px' }}
+          >
+            {selectedIds.length === unassignedList.length && unassignedList.length > 0 ? (
+              <>
+                <CheckSquare size={11} style={{ color: '#10B981' }} />
+                <span>Deselect All</span>
+              </>
+            ) : (
+              <>
+                <Square size={11} />
+                <span>Select All ({unassignedList.length})</span>
+              </>
+            )}
+          </button>
 
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleSelectTopN(4)}
-              style={{ fontSize: '0.72rem', padding: '3px 6px' }}
-            >
-              Top 4
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleSelectTopN(8)}
-              style={{ fontSize: '0.72rem', padding: '3px 6px' }}
-            >
-              Top 8
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={() => handleSelectTopN(16)}
-              style={{ fontSize: '0.72rem', padding: '3px 6px' }}
-            >
-              Top 16
-            </button>
-
-            {/* Search Filter */}
-            <div style={{ position: 'relative', width: '130px' }}>
-              <Search size={11} style={{ position: 'absolute', left: '6px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input
-                type="text"
-                placeholder="Search ID..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+          {/* Center: Copies of each QR */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+              Copies each QR:
+            </span>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              background: 'rgba(0, 0, 0, 0.35)',
+              borderRadius: '5px',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
+              overflow: 'hidden'
+            }}>
+              <button
+                type="button"
+                onClick={() => handleSetGlobalCopies(Math.max(1, copiesPerQr - 1))}
                 style={{
-                  width: '100%',
-                  padding: '3px 6px 3px 22px',
-                  fontSize: '0.74rem',
-                  borderRadius: '5px',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  background: 'rgba(0, 0, 0, 0.25)',
-                  color: 'var(--text-primary)'
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#E2E8F0',
+                  padding: '1px 6px',
+                  cursor: 'pointer',
+                  fontSize: '0.80rem',
+                  fontWeight: 800
+                }}
+                title="Decrease copies per QR"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={copiesPerQr}
+                onChange={(e) => handleSetGlobalCopies(parseInt(e.target.value, 10) || 1)}
+                style={{
+                  width: '28px',
+                  textAlign: 'center',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#10B981',
+                  fontSize: '0.76rem',
+                  fontWeight: 800,
+                  padding: '1px 0'
                 }}
               />
+              <button
+                type="button"
+                onClick={() => handleSetGlobalCopies(Math.min(50, copiesPerQr + 1))}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#E2E8F0',
+                  padding: '1px 6px',
+                  cursor: 'pointer',
+                  fontSize: '0.80rem',
+                  fontWeight: 800
+                }}
+                title="Increase copies per QR"
+              >
+                +
+              </button>
             </div>
+
+            <div style={{ display: 'flex', gap: '2px' }}>
+              {[1, 2, 3, 5].map(cnt => (
+                <button
+                  key={cnt}
+                  type="button"
+                  onClick={() => handleSetGlobalCopies(cnt)}
+                  style={{
+                    background: copiesPerQr === cnt && Object.keys(customCopies).length === 0
+                      ? '#10B981'
+                      : 'rgba(255, 255, 255, 0.05)',
+                    color: copiesPerQr === cnt && Object.keys(customCopies).length === 0
+                      ? '#FFFFFF'
+                      : 'var(--text-muted)',
+                    border: 'none',
+                    borderRadius: '4px',
+                    padding: '2px 5px',
+                    fontSize: '0.67rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {cnt}x
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowCopiesList(prev => !prev)}
+              className="btn btn-secondary btn-sm"
+              style={{
+                fontSize: '0.68rem',
+                padding: '2px 6px',
+                color: Object.keys(customCopies).length > 0 ? '#10B981' : 'var(--text-secondary)',
+                fontWeight: Object.keys(customCopies).length > 0 ? 800 : 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+              title="Customize copies for individual QR IDs"
+            >
+              <span>Per QR</span>
+              <span style={{ fontSize: '0.58rem' }}>{showCopiesList ? '▲' : '▼'}</span>
+            </button>
           </div>
 
           {/* Copy IDs & Export CSV */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={handleCopyIds}
               title="Copy selected QR IDs list"
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.70rem', padding: '2px 7px' }}
             >
-              {copiedAll ? <Check size={11} style={{ color: '#10B981' }} /> : <Copy size={11} />}
+              {copiedAll ? <Check size={10} style={{ color: '#10B981' }} /> : <Copy size={10} />}
               <span>Copy IDs</span>
             </button>
 
@@ -721,33 +1084,110 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
               className="btn btn-secondary btn-sm"
               onClick={handleExportCsv}
               title="Export unassigned QR list to CSV"
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.72rem', padding: '3px 8px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '0.70rem', padding: '2px 7px' }}
             >
-              <FileSpreadsheet size={11} style={{ color: '#10B981' }} />
+              <FileSpreadsheet size={10} style={{ color: '#10B981' }} />
               <span>CSV</span>
             </button>
           </div>
         </div>
+
+        {/* EXPANDABLE PER-QR CUSTOM COPIES DRAWER */}
+        {showCopiesList && selectedQrs.length > 0 && (
+          <div
+            className="no-print"
+            style={{
+              background: 'rgba(0, 0, 0, 0.4)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              padding: '6px 10px',
+              marginBottom: '6px',
+              maxHeight: '110px',
+              overflowY: 'auto'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.70rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                Customize Copies per QR ID:
+              </span>
+              {Object.keys(customCopies).length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomCopies({});
+                    showToast(`Reset all QRs to uniform ${copiesPerQr}x`);
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.67rem', cursor: 'pointer', padding: 0 }}
+                >
+                  Reset all to {copiesPerQr}x
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '4px' }}>
+              {selectedQrs.map((qr) => {
+                const currentCopies = getCopiesForQr(qr.qrId);
+                return (
+                  <div
+                    key={qr.qrId}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '5px',
+                      padding: '2px 6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '4px'
+                    }}
+                  >
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#CBD5E1', fontWeight: 600 }}>
+                      {qr.qrId}
+                    </span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '3px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleSetSingleQrCopies(qr.qrId, currentCopies - 1)}
+                        style={{ background: 'none', border: 'none', color: '#CBD5E1', padding: '0 4px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}
+                      >
+                        −
+                      </button>
+                      <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#10B981', minWidth: '14px', textAlign: 'center' }}>
+                        {currentCopies}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleSetSingleQrCopies(qr.qrId, currentCopies + 1)}
+                        style={{ background: 'none', border: 'none', color: '#CBD5E1', padding: '0 4px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700 }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* TOAST ALERT */}
         {toastMessage && (
           <div
             className="no-print"
             style={{
-              padding: '6px 12px',
+              padding: '4px 10px',
               background: 'rgba(16, 185, 129, 0.2)',
               border: '1px solid #10B981',
               borderRadius: '6px',
-              fontSize: '0.76rem',
+              fontSize: '0.74rem',
               color: '#10B981',
-              marginBottom: '10px',
+              marginBottom: '6px',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '5px',
               flexShrink: 0
             }}
           >
-            <Check size={13} />
+            <Check size={12} />
             <span>{toastMessage}</span>
           </div>
         )}
@@ -757,12 +1197,13 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
           className="no-print"
           style={{
             flex: 1,
-            minHeight: '260px',
+            minHeight: '200px',
+            maxHeight: '46vh',
             overflowY: 'auto',
             background: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '12px',
+            borderRadius: '10px',
             border: '1px solid rgba(255, 255, 255, 0.08)',
-            padding: '16px',
+            padding: '10px',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -770,59 +1211,59 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
           }}
         >
           {loading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', color: 'var(--text-muted)' }}>
-              <RefreshCw className="spinning" size={24} style={{ color: '#10B981' }} />
-              <span style={{ fontSize: '0.85rem' }}>Pulling unassigned dynamic QRs...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '6px', color: 'var(--text-muted)' }}>
+              <RefreshCw className="spinning" size={20} style={{ color: '#10B981' }} />
+              <span style={{ fontSize: '0.80rem' }}>Pulling unassigned dynamic QRs...</span>
             </div>
           ) : selectedQrs.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '8px', color: 'var(--text-muted)' }}>
-              <QrCode size={32} style={{ opacity: 0.4 }} />
-              <span style={{ fontSize: '0.86rem' }}>No unassigned standees selected. Click "Select All" or choose IDs above.</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '6px', color: 'var(--text-muted)' }}>
+              <QrCode size={28} style={{ opacity: 0.4 }} />
+              <span style={{ fontSize: '0.82rem' }}>No unassigned standees selected. Click "Select All" above.</span>
             </div>
           ) : (
             <>
               {/* Pagination navigation if multiple sheets */}
               {pages.length > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setActivePreviewPage(p => Math.max(1, p - 1))}
                     disabled={activePreviewPage <= 1}
-                    style={{ padding: '2px 6px' }}
+                    style={{ padding: '1px 5px' }}
                   >
-                    <ChevronLeft size={14} />
+                    <ChevronLeft size={13} />
                   </button>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    A4 Sheet {activePreviewPage} of {pages.length} ({pages[activePreviewPage - 1]?.length || 0} QRs)
+                  <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    {paperSize.toUpperCase()} Sheet {activePreviewPage} of {pages.length} ({pages[activePreviewPage - 1]?.length || 0} QRs)
                   </span>
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
                     onClick={() => setActivePreviewPage(p => Math.min(pages.length, p + 1))}
                     disabled={activePreviewPage >= pages.length}
-                    style={{ padding: '2px 6px' }}
+                    style={{ padding: '1px 5px' }}
                   >
-                    <ChevronRight size={14} />
+                    <ChevronRight size={13} />
                   </button>
                 </div>
               )}
 
-              {/* Scaled A4 Sheet Card Mockup */}
+              {/* Scaled A3 / A4 Sheet Card Mockup */}
               <div
                 style={{
                   width: '100%',
-                  maxWidth: '540px',
+                  maxWidth: '430px',
                   aspectRatio: '1 / 1.414',
                   background: '#FFFFFF',
-                  borderRadius: '8px',
-                  boxShadow: '0 8px 30px rgba(0,0,0,0.4)',
-                  padding: '12px',
+                  borderRadius: '6px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  padding: rows >= 4 ? '7px' : '10px',
                   boxSizing: 'border-box',
                   display: 'grid',
-                  gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                  gridTemplateRows: `repeat(${rows}, 1fr)`,
-                  gap: parsedQrsPerPage <= 2 ? '10px' : parsedQrsPerPage <= 4 ? '8px' : '6px'
+                  gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                  gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+                  gap: rows >= 4 ? '3px' : parsedQrsPerPage <= 2 ? '8px' : parsedQrsPerPage <= 4 ? '6px' : '4px'
                 }}
               >
                 {(pages[activePreviewPage - 1] || []).map((qrItem, idx) => (
@@ -830,9 +1271,12 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
                     key={qrItem.qrId || idx}
                     qrItem={qrItem}
                     qrsPerPage={parsedQrsPerPage}
+                    paperSize={paperSize}
                     showCutGuides={showCutGuides}
                     onToggleSelect={handleToggleSelect}
                     isMiniPreview={true}
+                    cols={cols}
+                    rows={rows}
                   />
                 ))}
               </div>
@@ -847,47 +1291,80 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginTop: '12px',
-            paddingTop: '10px',
+            marginTop: '8px',
+            paddingTop: '8px',
             borderTop: '1px solid rgba(255, 255, 255, 0.08)',
             flexShrink: 0
           }}
         >
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-            Selected: <strong style={{ color: '#10B981' }}>{selectedQrs.length}</strong> unassigned QRs across <strong>{pages.length}</strong> A4 Sheet(s)
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Selected: <strong style={{ color: '#10B981' }}>{selectedQrs.length}</strong> unassigned QRs (<strong style={{ color: '#10B981' }}>{totalStandees}</strong> standees) across <strong>{pages.length}</strong> {paperSize.toUpperCase()} Sheet(s)
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <button
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={onClose}
-              style={{ fontSize: '0.78rem' }}
+              disabled={generatingPdf}
+              style={{ fontSize: '0.76rem', padding: '4px 10px' }}
             >
               Cancel
             </button>
 
             <button
               type="button"
-              className="btn btn-primary btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={handlePrint}
-              disabled={selectedQrs.length === 0}
+              disabled={selectedQrs.length === 0 || generatingPdf}
               id="btn-print-batch-standees"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                fontSize: '0.8rem',
+                gap: '4px',
+                fontSize: '0.76rem',
+                fontWeight: 600,
+                padding: '4px 10px'
+              }}
+              title={`Print directly to ${paperSize.toUpperCase()} printer or print dialog`}
+            >
+              <Printer size={13} />
+              <span>Print {paperSize.toUpperCase()}</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={handleGeneratePdf}
+              disabled={selectedQrs.length === 0 || generatingPdf}
+              id="btn-generate-batch-pdf"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.78rem',
                 fontWeight: 700,
                 background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                 border: 'none',
                 boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
                 color: '#FFFFFF',
-                padding: '6px 16px'
+                padding: '5px 14px',
+                borderRadius: '6px',
+                cursor: generatingPdf ? 'wait' : 'pointer'
               }}
+              title={`Generate and download multi-page ${paperSize.toUpperCase()} PDF`}
             >
-              <Printer size={15} />
-              <span>Print {pages.length} A4 Sheet{pages.length > 1 ? 's' : ''} ({selectedQrs.length} Standees)</span>
+              {generatingPdf ? (
+                <>
+                  <RefreshCw className="spinning" size={13} />
+                  <span>Generating {paperSize.toUpperCase()} PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download size={13} />
+                  <span>Generate {paperSize.toUpperCase()} PDF ({totalStandees} Standees)</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -895,15 +1372,17 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
         {/* ========================================================== */}
         {/* PRINTABLE CONTAINER (Only visible during window.print())   */}
         {/* ========================================================== */}
-        <div id="printable-batch-container">
+        <div id="printable-batch-container" className="print-only">
           {pages.map((pageChunk, pageIndex) => (
             <div
               key={pageIndex}
-              className="a4-print-page"
+              className={paperSize === 'a3' ? 'a3-print-page' : 'a4-print-page'}
               style={{
-                gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                gridTemplateRows: `repeat(${rows}, 1fr)`,
-                gap: parsedQrsPerPage <= 2 ? '10mm' : parsedQrsPerPage <= 4 ? '7mm' : '5mm'
+                gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+                gap: paperSize === 'a3'
+                  ? (rows >= 4 ? '3.5mm' : parsedQrsPerPage <= 2 ? '14mm' : parsedQrsPerPage <= 4 ? '10mm' : '7mm')
+                  : (rows >= 4 ? '3mm' : parsedQrsPerPage <= 2 ? '10mm' : parsedQrsPerPage <= 4 ? '7mm' : '5mm')
               }}
             >
               {pageChunk.map((qrItem, itemIndex) => (
@@ -911,9 +1390,12 @@ export default function BatchPrintUnassignedModal({ isOpen, onClose, initialQrs 
                   key={qrItem.qrId || itemIndex}
                   qrItem={qrItem}
                   qrsPerPage={parsedQrsPerPage}
+                  paperSize={paperSize}
                   showCutGuides={showCutGuides}
                   onToggleSelect={null}
                   isMiniPreview={false}
+                  cols={cols}
+                  rows={rows}
                 />
               ))}
             </div>

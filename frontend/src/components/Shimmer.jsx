@@ -81,7 +81,7 @@ export function DashboardShimmer() {
       </div>
 
       {/* Multi-Column Section: Onboarded Businesses & Recent Customer Reviews */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+      <div className="dashboard-recent-grid" style={{ marginBottom: '20px' }}>
         {/* Card 1: Recent Onboarded Businesses */}
         <div className="glass-panel" style={{ padding: '22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

@@ -6,6 +6,14 @@
       "password": "sadmin@123",
       "name": "Super Admin",
       "role": "superadmin"
+    },
+    {
+      "id": "user-client-1",
+      "username": "admin",
+      "password": "admin@123",
+      "name": "Client Admin",
+      "role": "admin",
+      "clientId": null
     }
   ],
   "qrs": [],

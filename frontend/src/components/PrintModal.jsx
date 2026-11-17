@@ -59,7 +59,7 @@ function StandeeCardItem({ qr, client, qrsPerPage, showCutGuides = true, isMiniP
           : (isMiniPreview ? '4px 3px' : '6px 4px');
 
   const logoSize = is1 ? 48 : is2 ? 38 : is4 ? 32 : is6 ? 26 : 22;
-  const qrSize = is1 ? (isMiniPreview ? 140 : 210) : is2 ? (isMiniPreview ? 110 : 155) : is4 ? (isMiniPreview ? 80 : 115) : is6 ? (isMiniPreview ? 65 : 92) : is8 ? (isMiniPreview ? 55 : 76) : (isMiniPreview ? 46 : 64);
+  const qrSize = is1 ? (isMiniPreview ? 155 : 240) : is2 ? (isMiniPreview ? 120 : 180) : is4 ? (isMiniPreview ? 92 : 135) : is6 ? (isMiniPreview ? 72 : 105) : is8 ? (isMiniPreview ? 60 : 85) : (isMiniPreview ? 50 : 72);
   const nameFontSize = is1 ? '1.35rem' : is2 ? '1.1rem' : is4 ? '0.9rem' : is6 ? '0.8rem' : '0.72rem';
   const subFontSize = is1 ? '0.82rem' : is2 ? '0.74rem' : is4 ? '0.68rem' : '0.62rem';
   const ctaFontSize = is1 ? '0.96rem' : is2 ? '0.84rem' : is4 ? '0.76rem' : is6 ? '0.7rem' : '0.62rem';
@@ -130,6 +130,7 @@ function StandeeCardItem({ qr, client, qrsPerPage, showCutGuides = true, isMiniP
             <img
               src={getImageUrl(clientLogo)}
               alt={clientName}
+              crossOrigin="anonymous"
               style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
             />
           </div>
@@ -216,6 +217,7 @@ function StandeeCardItem({ qr, client, qrsPerPage, showCutGuides = true, isMiniP
         <img
           src={qrUrl}
           alt={`QR Code ${qr?.qrId || ''}`}
+          crossOrigin="anonymous"
           style={{
             width: `${qrSize}px`,
             height: `${qrSize}px`,
@@ -290,6 +292,7 @@ function StandeeCardItem({ qr, client, qrsPerPage, showCutGuides = true, isMiniP
             src={vasmiFullLogo}
             alt="Vasmi Group - Creating Your Identity"
             className="vasmi-full-logo-img"
+            crossOrigin="anonymous"
             style={{
               height: is12 ? '10px' : is8 ? '11px' : is4 ? '13px' : '15px',
               width: 'auto',
@@ -328,8 +331,169 @@ export default function PrintModal({ qr, client, onClose }) {
     { count: 12, label: '12 / Page', desc: '3×4 Stickers' }
   ];
 
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
   const handlePrint = () => {
     window.print();
+  };
+
+  // Helper to convert any image URL to a base64 Data URL (prevents CORS & canvas export issues)
+  const toDataUrl = async (url) => {
+    if (!url) return '';
+    if (url.startsWith('data:')) return url;
+    try {
+      const res = await fetch(url, { mode: 'cors' });
+      if (!res.ok) throw new Error('Fetch failed');
+      const blob = await res.blob();
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth || 300;
+            c.height = img.naturalHeight || 300;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(c.toDataURL('image/png'));
+          } catch {
+            resolve(url);
+          }
+        };
+        img.onerror = () => resolve(url);
+        img.src = url;
+      });
+    }
+  };
+
+  const handleGeneratePdf = async () => {
+    if (generatingPdf) return;
+    setGeneratingPdf(true);
+
+    let renderHost = null;
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      // 1. Preload / convert images to base64 Data URLs
+      const logoDataUrl = await toDataUrl(vasmiFullLogo);
+      const clientLogoUrl = clientLogo ? await toDataUrl(getImageUrl(clientLogo)) : '';
+      const qrDataUrl = await toDataUrl(qrUrl);
+
+      const container = document.getElementById('printable-standee-container');
+      if (!container) throw new Error('Print container not found');
+
+      const pageElements = container.querySelectorAll('.a4-print-page');
+      if (pageElements.length === 0) throw new Error('No print pages found');
+
+      // 2. Create rendering host inside viewport behind modal
+      renderHost = document.createElement('div');
+      renderHost.id = 'pdf-render-host-single';
+      renderHost.style.position = 'fixed';
+      renderHost.style.left = '0';
+      renderHost.style.top = '0';
+      renderHost.style.width = '794px';
+      renderHost.style.height = '1123px';
+      renderHost.style.minHeight = '1123px';
+      renderHost.style.zIndex = '1240';
+      renderHost.style.background = '#FFFFFF';
+      renderHost.style.overflow = 'hidden';
+      renderHost.style.pointerEvents = 'none';
+      renderHost.style.boxSizing = 'border-box';
+      document.body.appendChild(renderHost);
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const pageEl = pageElements[i];
+        const pageClone = pageEl.cloneNode(true);
+
+        pageClone.style.display = 'grid';
+        pageClone.style.width = '794px';
+        pageClone.style.height = '1123px';
+        pageClone.style.minHeight = '1123px';
+        pageClone.style.boxSizing = 'border-box';
+        pageClone.style.background = '#FFFFFF';
+        pageClone.style.padding = '10mm';
+        pageClone.style.margin = '0 auto';
+        pageClone.style.visibility = 'visible';
+
+        // Swap images to base64 data URLs
+        const imgs = pageClone.querySelectorAll('img');
+        imgs.forEach((img) => {
+          img.crossOrigin = 'anonymous';
+          const src = img.src || img.getAttribute('src');
+          if (img.classList.contains('vasmi-full-logo-img') && logoDataUrl) {
+            img.src = logoDataUrl;
+          } else if (clientLogoUrl && src && src.includes('logos/')) {
+            img.src = clientLogoUrl;
+          } else if (qrDataUrl) {
+            img.src = qrDataUrl;
+          }
+        });
+
+        renderHost.innerHTML = '';
+        renderHost.appendChild(pageClone);
+
+        // Wait for all images
+        const allImgs = Array.from(pageClone.querySelectorAll('img'));
+        await Promise.all(
+          allImgs.map((img) => {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            return new Promise((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+              setTimeout(resolve, 400);
+            });
+          })
+        );
+
+        await new Promise((r) => setTimeout(r, 60));
+
+        const canvas = await html2canvas(pageClone, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#FFFFFF',
+          width: 794,
+          height: 1123,
+          windowWidth: 794,
+          windowHeight: 1123,
+          x: 0,
+          y: 0,
+          scrollX: 0,
+          scrollY: 0,
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        if (i > 0) pdf.addPage('a4', 'portrait');
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+      }
+
+      const safeName = (clientName || qr?.qrId || 'standee').replace(/[^a-zA-Z0-9_-]/g, '_');
+      pdf.save(`${safeName}_standee_${parsedQrsPerPage}per_sheet.pdf`);
+    } catch (err) {
+      console.error('PDF Generation failed, opening print dialog:', err);
+      window.print();
+    } finally {
+      if (renderHost && renderHost.parentNode) {
+        renderHost.parentNode.removeChild(renderHost);
+      }
+      setGeneratingPdf(false);
+    }
   };
 
   const parsedQrsPerPage = Math.max(1, Math.min(24, parseInt(qrsPerPage, 10) || 1));
@@ -637,7 +801,7 @@ export default function PrintModal({ qr, client, onClose }) {
             Layout: <strong>{parsedQrsPerPage} QR{parsedQrsPerPage > 1 ? 's' : ''}</strong> per A4 sheet ({cols} cols × {rows} rows)
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <a
               href={qrUrl}
               download={`${qr.qrId || 'standee'}.png`}
@@ -650,9 +814,27 @@ export default function PrintModal({ qr, client, onClose }) {
             </a>
 
             <button
-              className="btn btn-primary btn-sm"
+              className="btn btn-secondary btn-sm"
               onClick={handlePrint}
+              disabled={generatingPdf}
               id="btn-modal-print-standee"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: '6px 12px'
+              }}
+              title="Print directly to printer or browser print dialog"
+            >
+              <Printer size={14} />
+              <span>Print</span>
+            </button>
+
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={handleGeneratePdf}
+              disabled={generatingPdf}
+              id="btn-modal-generate-pdf"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -661,11 +843,23 @@ export default function PrintModal({ qr, client, onClose }) {
                 color: '#FFFFFF',
                 fontWeight: 700,
                 border: 'none',
-                padding: '6px 16px'
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                padding: '6px 16px',
+                cursor: generatingPdf ? 'wait' : 'pointer'
               }}
+              title="Generate and download multi-page PDF"
             >
-              <Printer size={15} />
-              <span>Print {parsedSheetCopies} A4 Sheet{parsedSheetCopies > 1 ? 's' : ''} ({totalCardsToPrint} QRs)</span>
+              {generatingPdf ? (
+                <>
+                  <RefreshCw className="spinning" size={14} />
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download size={14} />
+                  <span>Generate PDF ({parsedSheetCopies} Sheet{parsedSheetCopies > 1 ? 's' : ''})</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -673,7 +867,7 @@ export default function PrintModal({ qr, client, onClose }) {
         {/* ========================================================== */}
         {/* PRINTABLE CONTAINER (Only visible during window.print())   */}
         {/* ========================================================== */}
-        <div id="printable-standee-container">
+        <div id="printable-standee-container" className="print-only">
           {pagesList.map((pageNum) => (
             <div
               key={pageNum}

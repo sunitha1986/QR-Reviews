@@ -20,7 +20,8 @@ import {
   Phone,
   PhoneCall,
   ScanLine,
-  AlertCircle
+  AlertCircle,
+  Star
 } from 'lucide-react';
 import config, { getImageUrl } from '../../config';
 import { getClientReviewUrl, generateSlug } from '../../utils/slug';
@@ -358,8 +359,8 @@ export default function Dashboard({ onNavigate, onTestReview }) {
         </div>
       </div>
 
-      {/* Two Column Section: Recent Onboardings & Latest Customer Reviews */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+      {/* Recent Onboarded Businesses & Latest Customer Feedback Grid (1 col on tablet/mobile, 2 col on desktop) */}
+      <div className="dashboard-recent-grid" style={{ marginBottom: '14px' }}>
         {/* Column 2: Onboarded Clients */}
         <div className="glass-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -510,23 +511,29 @@ export default function Dashboard({ onNavigate, onTestReview }) {
                 return (
                   <div
                     key={rev.id || Math.random()}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid var(--border-subtle)'
-                    }}
+                    className="dashboard-feedback-item"
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '0.82rem', color: 'var(--text-primary)' }}>
-                        {rev.clientName || 'Valued Customer'}
-                      </strong>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '0.84rem', color: 'var(--text-primary)' }}>
+                          {rev.clientName || 'Valued Customer'}
+                        </strong>
+                        {rev.rating && (
+                          <span
+                            className="feedback-rating-badge"
+                            title={`${rev.rating} out of 5 stars`}
+                          >
+                            <Star size={11} fill="#F59E0B" />
+                            <span>{rev.rating}★</span>
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                         {formattedDate}
                       </span>
                     </div>
 
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 6px 0', lineHeight: 1.4 }}>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: '0 0 6px 0', lineHeight: 1.45 }}>
                       "{rev.comments || 'No comment provided.'}"
                     </p>
 
